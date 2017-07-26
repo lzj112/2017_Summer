@@ -20,14 +20,52 @@
 #define in_redirect         2   //输入重定向
 #define have_pipe           3   //命令中有管道
 
-void get_input(char *);         //得到输入的命令
-void explain_input( char *buf,int argcount,char **arglist );      //对输入的命令进行解析
-void do_cmd( int argcount,char **arglist ); //执行命令
-int find_command( char * );     //查找命令中的可执行程序
+void get_input(char *buf);         //得到输入的命令
+void explain_input( char *buf,int *argcount,char arglist[][256] );      //对输入的命令进行解析
+void do_cmd( int argcount,char arglist[][256] ); //执行命令
+int find_command( char *command);     //查找命令中的可执行程序
 
 int main( int argc,char **argv )
 {
-    
+    int i,argcount=0;
+    char arglist[100][256];
+    char **arg=NULL;
+    char *buf=NULL;
+
+    buf=(char *)malloc(256);
+    if( buf==NULL )
+    {
+        printf( "malloc failed!\n" );
+        exit(-1);
+    }
+
+    while(1)
+    {
+        //将buf所指空间清0
+        memset( buf,0,256 );
+        printf( "myshell$$: " );
+        get_input( buf );
+        
+        //若输入的命令为exit或logout则退出本程序
+        if( strcmp( buf,"exit\n" ) == 0 || strcmp( buf,"logout\n" ) == 0 )
+        {
+            break;
+        }
+        for( i=0;i<100;i++ )
+        {
+            arglist[i][0]='\0';
+        }
+        argcount=0;
+        explain_input( buf,&argcount,arglist );
+        do_cmd(argcount,arglist);
+    }
+
+    if( buf != NULL )
+    {
+        free(buf);
+        buf= NULL;
+    }
+    exit(0);
 }
 
 void get_input( char *buf )      //获取用户输入
@@ -44,17 +82,19 @@ void get_input( char *buf )      //获取用户输入
     if( len == 256 )           //输出的命令过长就退出程序
     {
         printf( "Command is too long!\n" );
-        exit(1);
+        exit(-1);
     }
     buf[len]= '\n';
-    buf[++len]= '\0';
+    len++;
+    buf[len]= '\0';
 }
 
-void explain_input( char *buf, int argcount, char **arglist )  //解析buf中的命令 遇到\n结束
+void explain_input( char *buf, int *argcount, char arglist[100][256] )  //解析buf中的命令 遇到\n结束
 {
     char *p = buf;
     char *q = buf;
     int number = 0;
+
     while(1)
     {
         if( p[0] == '\n' )
@@ -65,24 +105,24 @@ void explain_input( char *buf, int argcount, char **arglist )  //解析buf中的
         {
             q=p;
             number=0;
-            while( (q[number] != ' ') && (q[number] != '\n') )
+            while( (q[0] != ' ') && (q[0] != '\n') )
             {
                 number++;
                 q++;
             }
-            strncpy( arglist[argcount],p,number+1 );
-            arglist[argcount][number] = '\0';
-            argcount += 1;
+            strncpy( arglist[*argcount],p,number+1 );
+            arglist[*argcount][number] = '\0';
+            *argcount =*argcount+1;
             p=q;
             
         }
     }
 }
 
-void do_cmd( int argcount,char **arglist )
+void do_cmd( int argcount,char arglist[][256] )
 {
     int flag=0;
-    int how=normal;                         //用于指示命令中是否含有 >  <  |
+    int how=0;                         //用于指示命令中是否含有 >  <  |
     int background = 0;                     //标识命令中是否有后台运行标识符 &
     int status, i, fd;
     char *arg[argcount+1], *argnext[argcount+1], *file;
@@ -98,9 +138,9 @@ void do_cmd( int argcount,char **arglist )
     //查看命令行是否有后台运行符
     for( i=0;i<argcount;i++ )
     {
-        if( strcmp( arg[i],"&",1 ) == 0 )
+        if( strncmp( arg[i],"&",1 ) == 0 )
         {
-            if( i == argcount )             //&位置在命令最后
+            if( i == argcount-1 )             //&位置在命令最后
             {
                 background=1;
                 arg[argcount-1]=NULL;
@@ -168,8 +208,11 @@ void do_cmd( int argcount,char **arglist )
     {
         for( i=0; arg[i] != NULL; i++ )
         {
-            file = arg[i+1];
-            arg[i] = NULL;
+            if( strcmp(arg[i],"<") == 0 )
+            {
+                file = arg[i+1];
+                arg[i]=NULL;
+            }
         }
     }
     if( how == have_pipe )              //命令中只有一个管道符号
@@ -190,7 +233,7 @@ void do_cmd( int argcount,char **arglist )
             }
         }
     }
-    if( (pid = fork()) <0 )
+    if( (pid = fork()) <0 ) //执行命令都在子进程中
     {
         printf( "process creation failed!\n" );
         return ;
@@ -202,9 +245,146 @@ void do_cmd( int argcount,char **arglist )
             //pid=0说明是子进程，在子进程执行输入的命令，命令中不含>, <, |
             if( pid == 0 )
             {
-                if( ! )
+                if( !(find_command( arg[0] )) )
+                {
+                    printf("%s :Command not found!\n",arg[0]);
+                    exit(0);
+                }
+                execvp( arg[0],arg );
+                exit(0);
             }
+            break;
         }
+        case 1:
+        {
+            //输入的命令中含有输出重定向
+            if( pid == 0 )
+            {
+                if( (!find_command( arg[0] )) )
+                {
+                    printf( "%s : Command not found!\n",arg[0] );
+                    exit(0);
+                }
+                fd = open( file,O_RDWR | O_CREAT | O_TRUNC, 0644 ); //可读可写，不存在创建，可写打开时，文件清空  0644的0表示十进制
+                dup2( fd,1 );    //指定新文件描述符为1
+                execvp( arg[0],arg );
+                exit(0);
+            }
+            break;
+        }
+        case 2:
+        {
+            //输入的命令中含有输出重定向
+            if( pid == 0 )
+            {
+                if( !(find_command(arg[0])) )
+                {
+                    printf( "%s : Command not find!\n",arg[0] );
+                    exit(0);
+                }
+                fd = open( file,O_RDONLY ); //只读打开
+                dup2( fd,0 );
+                execvp( arg[0],arg );
+                exit(0);
+            }
+            break;
+        }
+        case 3:
+        {
+            //输入的命令中含有管道符
+            if( pid == 0 )
+            {
+                int pid2;
+                int status2;
+                int fd2;
+
+                if( ( pid2=fork() )<0 )   //在子进程中在创建一个子进程
+                {
+                    printf( "process Creation failed!\n" );
+                    exit(0);
+                }
+                else if( pid == 0 )
+                {
+                    if( !(find_command(arg[0])) )
+                    {
+                        printf( "%s : Command not found!\n",arg[0] );  //
+                        exit(0);
+                    }
+                    fd2 = open( "/tmp/transfer",O_WRONLY | O_CREAT | O_TRUNC,0644 );
+                    dup2( fd2,1 );
+                    execvp( arg[0],arg );
+                    exit(0);
+                }
+
+                if( waitpid( pid2,&status2,0 ) == -1 )
+                {
+                    printf( "wait for child process error!\n" );
+                }
+                if( !(find_command(arg[0])) )
+                {
+                    printf( "%s : Command not find!\n",arg[0] );
+                    exit(0);
+                }
+                fd2 = open( "/tmp/transfer",O_RDONLY );
+                dup2( fd2,0 );
+                execvp( argnext[0],argnext );
+
+                if( remove( "/tmp/transfer" ) )
+                    printf( "remove error\n" );
+
+                exit(0);
+            }
+            break;
+        }
+        default:
+            break;
+    }
+    
+    //若命令中有&，表示后台执行，父进程直接返回，不等待子进程结束
+    if( background == 1 )
+    {
+        printf( "process id : %d\n",pid );
+        return ;
+    }
+    if( waitpid( pid,&status,0 ) == -1 )
+    {
+        printf( "wait for child process error\n" );
+
+    }
+}
+
+
+//查找命令中的可执行程序
+int find_command( char *command )
+{
+    DIR *dp;
+    struct dirent *dirp;
+    char *path[]={ "./", "/bin", "/usr/bin", NULL };
+    
+    if ( strncmp( command,"./",2 ) == 0 )  //如果命令是./fork之类，使指针跳过目录指向命令
+    {
+        command=command+2;
     }
 
+    //分别在当前目录，/bin和/usr/bin目录查找要执行的程序
+    int i=0;
+    while( path[i] != NULL )
+    {
+        if( (dp=opendir(path[i]) ) == NULL )
+        {
+            printf( "can not open /bin\n" );
+        }
+        while( (dirp=readdir(dp)) != NULL )
+        {
+            if( strcmp( dirp->d_name,command ) == 0 )
+            {
+                closedir( dp );
+                return 1;
+            }
+        }
+        closedir( dp );
+        i++;
+    }
+    return 0;
 }
+

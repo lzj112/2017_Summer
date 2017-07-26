@@ -28,6 +28,7 @@ void explain_input( char *buf,int *argcount,char arglist[][256] );      //对输
 void do_cmd( int argcount,char arglist[][256] ); //执行命令
 int find_command( char *command);     //查找命令中的可执行程序
 
+
 int main( int argc,char **argv )
 {
     signal( SIGINT,SIG_IGN );    //忽略中断信号
@@ -37,19 +38,21 @@ int main( int argc,char **argv )
     char *buf=NULL;
 
     buf=(char *)malloc(256);
-    if( buf==NULL )
+  /*  if( buf==NULL )
     {
         printf( "malloc failed!\n" );
         exit(-1);
-    }
+    }*/
 
     while(1)
     {
         //将buf所指空间清0
         memset( buf,0,256 );
-        printf( "myshell$$: " );
-        get_input( buf );
-        
+        buf=readline("myshell$$:");
+        if( *buf )
+        {
+            add_history(buf);
+        } 
         //若输入的命令为exit或logout则退出本程序
         if( strcmp( buf,"exit\n" ) == 0 || strcmp( buf,"logout\n" ) == 0 )
         {
@@ -60,6 +63,7 @@ int main( int argc,char **argv )
             arglist[i][0]='\0';
         }
         argcount=0;
+        printf( "-->%s<--\n",buf );  //
         explain_input( buf,&argcount,arglist );
         do_cmd(argcount,arglist);
     }
@@ -72,26 +76,33 @@ int main( int argc,char **argv )
     exit(0);
 }
 
-void get_input( char *buf )      //获取用户输入
+/*void get_input( char *buf )      //获取用户输入
 {
     int len=0;
     int ch;
 
     ch = getchar();
-    while( len<256 && ch!= '\n' )
+    while( len<256 && ch!= '\n' && ch!= '\24')
     {
         buf[len++]=ch;
         ch=getchar();
     }
+   // fgets( buf,256,stdin );
+    temp = (char*)malloc(sizeof(char)*256);
+    temp=readline("");
+    len=strlen(temp);
+    temp[len]='\n';
+    temp[len+1]='\0';
+    
+    printf("--->%s<---\n",temp);   //
+    
+    strncpy(buf,temp,len);
     if( len == 256 )           //输出的命令过长就退出程序
     {
         printf( "Command is too long!\n" );
         exit(-1);
     }
-    buf[len]= '\n';
-    len++;
-    buf[len]= '\0';
-}
+}*/
 
 void explain_input( char *buf, int *argcount, char arglist[100][256] )  //解析buf中的命令 遇到\n结束
 {
@@ -101,8 +112,11 @@ void explain_input( char *buf, int *argcount, char arglist[100][256] )  //解析
 
     while(1)
     {
-        if( p[0] == '\n' )
+        if( p[0] == '\0' )
+        {
+            printf("yes\n");
             break;
+        }
         if( p[0] == ' ' )
             p++;
         else
@@ -114,9 +128,10 @@ void explain_input( char *buf, int *argcount, char arglist[100][256] )  //解析
                 number++;
                 q++;
             }
-            strncpy( arglist[*argcount],p,number+1 );
+            strncpy( arglist[*argcount],p,number );
             arglist[*argcount][number] = '\0';
             *argcount =*argcount+1;
+            printf( "arg = %d\n",*argcount);
             p=q;
             
         }
@@ -157,8 +172,8 @@ void do_cmd( int argcount,char arglist[][256] )
             }
         }
     }
-    
-   /* for( i=0; arg[i] != NULL; i++ )
+  /*  
+    for( i=0; arg[i] != NULL; i++ )
     {
         if( strncmp(arg[i],"cd",2)==0 )  // cd命令
         {
@@ -166,6 +181,7 @@ void do_cmd( int argcount,char arglist[][256] )
             break;
         }
     }*/
+
     for( i=0; arg[i] != NULL; i++ )
     {
         if( strcmp( arg[i],">" ) == 0 )  //命令中有输出重定向
@@ -350,20 +366,12 @@ void do_cmd( int argcount,char arglist[][256] )
         }
        /* case 4:                                 // cd命令
             {
-                int pid2;
-               if( pid ==0 ) 
+               if( pid = 0 ) 
                 {
                     exit( 0 );
                 }
-                if( (pid2=vfork())<0 )
-                {
-                    printf("vfork error!\n");
-                }
-                if( pid2 == 0 )
-                {
-                    execvp("./chdir",arg[1]);
-                    exit(0);
-                }
+                cdcommand(arg[1]);
+                exit(0);
                 break;
             }*/
         default:
@@ -384,7 +392,7 @@ void do_cmd( int argcount,char arglist[][256] )
 }
 
 
-/*void cdcommand( char *path )
+/*void cdcommand( char *path )              //cd命令
 {
     if( chdir(path) )
     {

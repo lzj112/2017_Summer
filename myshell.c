@@ -14,6 +14,9 @@
 #include<fcntl.h>
 #include<sys/stat.h>
 #include<dirent.h>
+#include<pthread.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #define normal              0   //一般的命令
 #define out_redirect        1   //输出重定向
@@ -27,7 +30,8 @@ int find_command( char *command);     //查找命令中的可执行程序
 
 int main( int argc,char **argv )
 {
-    int i,argcount=0;
+    signal( SIGINT,SIG_IGN );    //忽略中断信号
+    int i,argcount=0; 
     char arglist[100][256];
     char **arg=NULL;
     char *buf=NULL;
@@ -153,17 +157,25 @@ void do_cmd( int argcount,char arglist[][256] )
             }
         }
     }
-
+    
+   /* for( i=0; arg[i] != NULL; i++ )
+    {
+        if( strncmp(arg[i],"cd",2)==0 )  // cd命令
+        {
+            how = 4;
+            break;
+        }
+    }*/
     for( i=0; arg[i] != NULL; i++ )
     {
-        if( strcmp( arg[i],">" ) == 0 )
+        if( strcmp( arg[i],">" ) == 0 )  //命令中有输出重定向
         {
             flag++;
             how = out_redirect;
             if( arg[i+1] == NULL ) //如果 > 是最后一个
             flag++;
         }
-        if( strcmp( arg[i],"<" ) == 0 )
+        if( strcmp( arg[i],"<" ) == 0 )  //命令中有输入重定向
         {
             flag++;
             how = in_redirect;
@@ -172,7 +184,7 @@ void do_cmd( int argcount,char arglist[][256] )
                 flag++;
             }
         }
-        if( strcmp( arg[i],"|" ) == 0 )
+        if( strcmp( arg[i],"|" ) == 0 )  //命令中有管道
         {
             flag++;
             how=have_pipe;
@@ -336,6 +348,24 @@ void do_cmd( int argcount,char arglist[][256] )
             }
             break;
         }
+       /* case 4:                                 // cd命令
+            {
+                int pid2;
+               if( pid ==0 ) 
+                {
+                    exit( 0 );
+                }
+                if( (pid2=vfork())<0 )
+                {
+                    printf("vfork error!\n");
+                }
+                if( pid2 == 0 )
+                {
+                    execvp("./chdir",arg[1]);
+                    exit(0);
+                }
+                break;
+            }*/
         default:
             break;
     }
@@ -352,6 +382,15 @@ void do_cmd( int argcount,char arglist[][256] )
 
     }
 }
+
+
+/*void cdcommand( char *path )
+{
+    if( chdir(path) )
+    {
+        printf("cd error\n");
+    }
+}*/
 
 
 //查找命令中的可执行程序

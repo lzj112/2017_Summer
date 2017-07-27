@@ -15,8 +15,9 @@
 #include<sys/stat.h>
 #include<dirent.h>
 #include<pthread.h>
-#include <readline/readline.h>
-#include <readline/history.h>
+/*#include <readline/readline.h>
+#include <readline/history.h>*/
+
 
 #define normal              0   //一般的命令
 #define out_redirect        1   //输出重定向
@@ -38,23 +39,30 @@ int main( int argc,char **argv )
     char *buf=NULL;
 
     buf=(char *)malloc(256);
-  /*  if( buf==NULL )
+    if( buf==NULL )
     {
         printf( "malloc failed!\n" );
         exit(-1);
-    }*/
+    }
 
     while(1)
     {
         //将buf所指空间清0
         memset( buf,0,256 );
-        buf=readline("myshell$$:");
+
+        printf( "myshell$$:" );
+        get_input( buf ); 
+
+        /*buf=readline("myshell$$:");            //使用readline()
+
         if( *buf )
         {
             add_history(buf);
-        } 
+        } */
+
+
         //若输入的命令为exit或logout则退出本程序
-        if( strcmp( buf,"exit\n" ) == 0 || strcmp( buf,"logout\n" ) == 0 )
+        if( strcmp( buf,"exit" ) == 0 || strcmp( buf,"logout" ) == 0 )
         {
             break;
         }
@@ -63,8 +71,8 @@ int main( int argc,char **argv )
             arglist[i][0]='\0';
         }
         argcount=0;
-        printf( "-->%s<--\n",buf );  //
-        explain_input( buf,&argcount,arglist );
+       // printf( "-->%s<--\n",buf );  
+        explain_input( buf, &argcount,arglist );
         do_cmd(argcount,arglist);
     }
 
@@ -76,33 +84,17 @@ int main( int argc,char **argv )
     exit(0);
 }
 
-/*void get_input( char *buf )      //获取用户输入
+void get_input( char *buf )      //获取用户输入
 {
     int len=0;
-    int ch;
-
-    ch = getchar();
-    while( len<256 && ch!= '\n' && ch!= '\24')
-    {
-        buf[len++]=ch;
-        ch=getchar();
-    }
-   // fgets( buf,256,stdin );
-    temp = (char*)malloc(sizeof(char)*256);
-    temp=readline("");
-    len=strlen(temp);
-    temp[len]='\n';
-    temp[len+1]='\0';
-    
-    printf("--->%s<---\n",temp);   //
-    
-    strncpy(buf,temp,len);
+    gets(buf);
+    len = strlen(buf);
     if( len == 256 )           //输出的命令过长就退出程序
     {
         printf( "Command is too long!\n" );
         exit(-1);
     }
-}*/
+}
 
 void explain_input( char *buf, int *argcount, char arglist[100][256] )  //解析buf中的命令 遇到\n结束
 {
@@ -114,7 +106,6 @@ void explain_input( char *buf, int *argcount, char arglist[100][256] )  //解析
     {
         if( p[0] == '\0' )
         {
-            printf("yes\n");
             break;
         }
         if( p[0] == ' ' )
@@ -123,17 +114,15 @@ void explain_input( char *buf, int *argcount, char arglist[100][256] )  //解析
         {
             q=p;
             number=0;
-            while( (q[0] != ' ') && (q[0] != '\n') )
+            while( (q[0] != ' ') && (q[0] != '\0') )
             {
                 number++;
                 q++;
             }
             strncpy( arglist[*argcount],p,number );
             arglist[*argcount][number] = '\0';
-            *argcount =*argcount+1;
-            printf( "arg = %d\n",*argcount);
+            *argcount += 1;
             p=q;
-            
         }
     }
 }
@@ -390,15 +379,6 @@ void do_cmd( int argcount,char arglist[][256] )
 
     }
 }
-
-
-/*void cdcommand( char *path )              //cd命令
-{
-    if( chdir(path) )
-    {
-        printf("cd error\n");
-    }
-}*/
 
 
 //查找命令中的可执行程序

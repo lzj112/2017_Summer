@@ -1,3 +1,4 @@
+
 /*************************************************************************
 	> File Name: myshell.c
 	> Author: 
@@ -15,6 +16,8 @@
 #include<sys/stat.h>
 #include<dirent.h>
 #include<pthread.h>
+#include<pwd.h>
+#include<grp.h>
 /*#include <readline/readline.h>
 #include <readline/history.h>*/
 
@@ -24,6 +27,8 @@
 #define in_redirect         2   //输入重定向
 #define have_pipe           3   //命令中有管道
 
+
+void print();                        //打印提示符
 void get_input(char *buf);         //得到输入的命令
 void explain_input( char *buf,int *argcount,char arglist[][256] );      //对输入的命令进行解析
 void do_cmd( int argcount,char arglist[][256] ); //执行命令
@@ -38,27 +43,27 @@ int main( int argc,char **argv )
     char **arg=NULL;
     char *buf=NULL;
 
-    buf=(char *)malloc(256);
+   /* buf=(char *)malloc(256);
     if( buf==NULL )
     {
         printf( "malloc failed!\n" );
         exit(-1);
-    }
+    }*/
 
     while(1)
     {
         //将buf所指空间清0
+        buf=(char *)malloc(sizeof(char)*256);
         memset( buf,0,256 );
+    
+        print();
+       // get_input( buf ); 
 
-        printf( "myshell$$:" );
-        get_input( buf ); 
-
-        /*buf=readline("myshell$$:");            //使用readline()
-
+        buf=readline("");            //使用readline()
         if( *buf )
         {
             add_history(buf);
-        } */
+        } 
 
 
         //若输入的命令为exit或logout则退出本程序
@@ -83,6 +88,22 @@ int main( int argc,char **argv )
     }
     exit(0);
 }
+
+void print()                    //打印提示符
+{
+    uid_t uid;
+    struct passwd *pw;
+    uid = getuid();
+    pw = getpwuid( uid );
+    char *buf=NULL;
+    buf=(char *)malloc(sizeof(char)*100);
+    getcwd(buf,100);
+    printf( "\033[;44m %s\033[0m",pw->pw_gecos );
+    printf( "@lzj-ThinkPad-E565:" );
+    printf( "\033[;46m%s\033[0m $ ",buf );
+    //printf( "%s@lzj-ThinkPad-E565:%s$",pw->pw_gecos,buf );
+}
+
 
 void get_input( char *buf )      //获取用户输入
 {

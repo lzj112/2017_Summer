@@ -76,16 +76,16 @@ int main( int argc,char **argv )
             arglist[i][0]='\0';
         }
         argcount=0;
-       // printf( "-->%s<--\n",buf );  
-        explain_input( buf, &argcount,arglist );
-        do_cmd(argcount,arglist);
+
+        explain_input( buf, &argcount,arglist );  //命令解析
+        do_cmd(argcount,arglist);                 //命令执行
+        if( buf != NULL )
+        {
+            free( buf );
+            buf = NULL;
+        }
     }
 
-    if( buf != NULL )
-    {
-        free(buf);
-        buf= NULL;
-    }
     exit(0);
 }
 
@@ -93,19 +93,22 @@ void print()                    //打印提示符
 {
     uid_t uid;
     struct passwd *pw;
+
     uid = getuid();
     pw = getpwuid( uid );
+
     char *buf=NULL;
     buf=(char *)malloc(sizeof(char)*100);
+
     getcwd(buf,100);
-    printf( "\033[;44m %s\033[0m",pw->pw_gecos );
+    printf( "\033[;34m %s\033[0m",pw->pw_gecos );
     printf( "@lzj-ThinkPad-E565:" );
-    printf( "\033[;46m%s\033[0m $ ",buf );
+    printf( "\033[;36m%s\033[0m $ ",buf );
     //printf( "%s@lzj-ThinkPad-E565:%s$",pw->pw_gecos,buf );
 }
 
 
-void get_input( char *buf )      //获取用户输入
+/*void get_input( char *buf )      //获取用户输入
 {
     int len=0;
     gets(buf);
@@ -115,7 +118,7 @@ void get_input( char *buf )      //获取用户输入
         printf( "Command is too long!\n" );
         exit(-1);
     }
-}
+}*/
 
 void explain_input( char *buf, int *argcount, char arglist[100][256] )  //解析buf中的命令 遇到\n结束
 {
@@ -182,13 +185,28 @@ void do_cmd( int argcount,char arglist[][256] )
             }
         }
     }
-  /*  
-    for( i=0; arg[i] != NULL; i++ )
+    
+ /*   for( i=0;;i++ )
     {
-        if( strncmp(arg[i],"cd",2)==0 )  // cd命令
+        if( strncmp( arg[0],"cd",2)==0 )  // cd命令
         {
-            how = 4;
-            break;
+            if( arg[1] == NULL )
+            {
+                if( chdir("~") )
+                {
+                    printf("chdir ~ error     %d\n",errno);
+                }
+                return ;
+            }
+            else
+            {
+                if( chdir(arg[1]) )
+                {
+                    printf( "%s",arg[1] );
+                    printf( "chdir  arg[1] error     %d\n",errno );
+                }
+                return ;
+            }
         }
     }*/
 

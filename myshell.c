@@ -18,8 +18,8 @@
 #include<pthread.h>
 #include<pwd.h>
 #include<grp.h>
-/*#include <readline/readline.h>
-#include <readline/history.h>*/
+#include <readline/readline.h>
+#include <readline/history.h>
 
 
 #define normal              0   //一般的命令
@@ -59,7 +59,7 @@ int main( int argc,char **argv )
         print();
        // get_input( buf ); 
 
-        buf=readline("");            //使用readline()
+        buf=readline(" ");            //使用readline()
         if( *buf )
         {
             add_history(buf);
@@ -88,7 +88,6 @@ int main( int argc,char **argv )
 
     exit(0);
 }
-
 void print()                    //打印提示符
 {
     uid_t uid;
@@ -99,9 +98,9 @@ void print()                    //打印提示符
 
     char *buf=NULL;
     buf=(char *)malloc(sizeof(char)*100);
-
+    
     getcwd(buf,100);
-    printf( "\033[;34m %s\033[0m",pw->pw_gecos );
+    printf( "\033[;34m %s\033[0m",pw->pw_name);
     printf( "@lzj-ThinkPad-E565:" );
     printf( "\033[;36m%s\033[0m $ ",buf );
     //printf( "%s@lzj-ThinkPad-E565:%s$",pw->pw_gecos,buf );
@@ -186,30 +185,35 @@ void do_cmd( int argcount,char arglist[][256] )
         }
     }
     
- /*   for( i=0;;i++ )
+    if( strncmp( arg[0],"cd",2)==0 )  // cd命令
     {
-        if( strncmp( arg[0],"cd",2)==0 )  // cd命令
+        char temp[10] = "/home/lzj";
+        if( arg[1] == NULL || !strcmp(arg[1],"~" ))
         {
-            if( arg[1] == NULL )
+            if( (chdir(temp) ))
             {
-                if( chdir("~") )
-                {
-                    printf("chdir ~ error     %d\n",errno);
-                }
-                return ;
+                printf("chdir ~ error     \n");
             }
-            else
-            {
-                if( chdir(arg[1]) )
-                {
-                    printf( "%s",arg[1] );
-                    printf( "chdir  arg[1] error     %d\n",errno );
-                }
-                return ;
-            }
+            return ;
         }
-    }*/
-
+        else
+        {
+            if(arg[1][0] == '~')
+            {
+                char test[20],test_1[20];
+                strcpy(test,arg[1]);
+                strncpy(test_1,test+1,sizeof(test)-1);
+                strcat(temp,test_1);
+                chdir(temp);
+            }
+            else if( chdir(arg[1]) )
+            {
+                printf( "error chdir" );
+            }
+            return ;
+        }
+    }
+    
     for( i=0; arg[i] != NULL; i++ )
     {
         if( strcmp( arg[i],">" ) == 0 )  //命令中有输出重定向
@@ -322,7 +326,7 @@ void do_cmd( int argcount,char arglist[][256] )
                     exit(0);
                 }
                 fd = open( file,O_RDWR | O_CREAT | O_TRUNC, 0644 ); //可读可写，不存在创建，可写打开时，文件清空  0644的0表示十进制
-                dup2( fd,1 );    //指定新文件描述符为1
+                dup2( fd,1 );    //指定新文件描述符为1,文件描述符为1时代表输出到屏幕，现在该文件占用后，输出到该文件，下同
                 execvp( arg[0],arg );
                 exit(0);
             }

@@ -1,11 +1,3 @@
-
-/*************************************************************************
-	> File Name: myshell.c
-	> Author: 
-	> Mail: 
-	> Created Time: 2017年07月25日 星期二 17时32分59秒
- ************************************************************************/
-
 #include<stdio.h>
 #include<stdlib.h>
 #include<unistd.h>
@@ -43,28 +35,27 @@ int main( int argc,char **argv )
     char **arg=NULL;
     char *buf=NULL;
 
-   /* buf=(char *)malloc(256);
-    if( buf==NULL )
-    {
-        printf( "malloc failed!\n" );
-        exit(-1);
-    }*/
-
     while(1)
     {
         //将buf所指空间清0
         buf=(char *)malloc(sizeof(char)*256);
         memset( buf,0,256 );
-    
+
         print();
        // get_input( buf ); 
 
         buf=readline(" ");            //使用readline()
+
+        int len=strlen(buf);          //判断是否输入了命令
+        if( !len )
+        {
+            continue;
+        }
+
         if( *buf )
         {
             add_history(buf);
         } 
-
 
         //若输入的命令为exit或logout则退出本程序
         if( strcmp( buf,"exit" ) == 0 || strcmp( buf,"logout" ) == 0 )
@@ -98,26 +89,14 @@ void print()                    //打印提示符
 
     char *buf=NULL;
     buf=(char *)malloc(sizeof(char)*100);
-    
+
     getcwd(buf,100);
+    //来点颜色
     printf( "\033[;34m %s\033[0m",pw->pw_name);
     printf( "@lzj-ThinkPad-E565:" );
     printf( "\033[;36m%s\033[0m $ ",buf );
-    //printf( "%s@lzj-ThinkPad-E565:%s$",pw->pw_gecos,buf );
+
 }
-
-
-/*void get_input( char *buf )      //获取用户输入
-{
-    int len=0;
-    gets(buf);
-    len = strlen(buf);
-    if( len == 256 )           //输出的命令过长就退出程序
-    {
-        printf( "Command is too long!\n" );
-        exit(-1);
-    }
-}*/
 
 void explain_input( char *buf, int *argcount, char arglist[100][256] )  //解析buf中的命令 遇到\n结束
 {
@@ -165,7 +144,7 @@ void do_cmd( int argcount,char arglist[][256] )
         arg[i] = ( char * )arglist[i];
     }
     arg[argcount] = NULL;
-    
+
     //查看命令行是否有后台运行符
     for( i=0;i<argcount;i++ )
     {
@@ -184,7 +163,7 @@ void do_cmd( int argcount,char arglist[][256] )
             }
         }
     }
-    
+
     if( strncmp( arg[0],"cd",2)==0 )  // cd命令
     {
         char temp[10] = "/home/lzj";
@@ -213,7 +192,7 @@ void do_cmd( int argcount,char arglist[][256] )
             return ;
         }
     }
-    
+
     for( i=0; arg[i] != NULL; i++ )
     {
         if( strcmp( arg[i],">" ) == 0 )  //命令中有输出重定向
@@ -326,7 +305,7 @@ void do_cmd( int argcount,char arglist[][256] )
                     exit(0);
                 }
                 fd = open( file,O_RDWR | O_CREAT | O_TRUNC, 0644 ); //可读可写，不存在创建，可写打开时，文件清空  0644的0表示十进制
-                dup2( fd,1 );    //指定新文件描述符为1,文件描述符为1时代表输出到屏幕，现在该文件占用后，输出到该文件，下同
+                dup2( fd,1 );    //指定新文件描述符为1
                 execvp( arg[0],arg );
                 exit(0);
             }
@@ -396,20 +375,11 @@ void do_cmd( int argcount,char arglist[][256] )
             }
             break;
         }
-       /* case 4:                                 // cd命令
-            {
-               if( pid = 0 ) 
-                {
-                    exit( 0 );
-                }
-                cdcommand(arg[1]);
-                exit(0);
-                break;
-            }*/
+
         default:
             break;
     }
-    
+
     //若命令中有&，表示后台执行，父进程直接返回，不等待子进程结束
     if( background == 1 )
     {
@@ -430,7 +400,7 @@ int find_command( char *command )
     DIR *dp;
     struct dirent *dirp;
     char *path[]={ "./", "/bin", "/usr/bin", NULL };
-    
+
     if ( strncmp( command,"./",2 ) == 0 )  //如果命令是./fork之类，使指针跳过目录指向命令
     {
         command=command+2;
@@ -457,4 +427,3 @@ int find_command( char *command )
     }
     return 0;
 }
-

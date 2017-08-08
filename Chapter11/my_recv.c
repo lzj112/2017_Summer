@@ -5,7 +5,7 @@
 	> Created Time: 2017年08月04日 星期五 11时00分12秒
  ************************************************************************/
 
-//#define MY_RECV_C
+#define MY_RECV_C
 
 #include<stdio.h>
 #include<sys/types.h>
@@ -44,7 +44,7 @@ void my_err( const char *err_string,int line )
      {
          if( len_remain = recv( conn_fd,recv_buf,sizeof(recv_buf),0 ) < 0 )
          {
-             me_err( "recv",__LINE__ );
+             my_err( "recv",__LINE__ );
          }
          else if( len_remain == 0 )         //目的计算机端的socket连接关闭
          {
@@ -54,7 +54,7 @@ void my_err( const char *err_string,int line )
      }
 
      //冲自定义缓冲区中读取一次数据
-     for( i=0;*pread != '\n';i++ )'
+     for( i=0;*pread != '\n';i++ )
      {
         if( i>len )
          {

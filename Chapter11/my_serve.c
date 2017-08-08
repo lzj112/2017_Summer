@@ -7,6 +7,7 @@
 
 
 #include<stdio.h>
+#include<string.h>
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<unistd.h>
@@ -42,18 +43,18 @@ int find_name( const char *name )
 {
     int i;
     
-    if( nanme == NULL )
+    if( name == NULL )
     {
         printf( "in find_name,NULL pointer\n" );
         return -2;
     }
-    for( i=0;user[i].username[0] != ' ';i++ )
-    [
+    for( i=0;users[i].username[0] != ' ';i++ )
+    {
         if( strcmp( users[i].username,name ) == 0 )
         {
             return i;
         }
-    ]
+    }
 
     return -1;
 }
@@ -68,7 +69,7 @@ void send_data( int conn_fd,const char *string )
 int main()
 {
     int sock_fd,conn_fd;
-    int optval,;
+    int optval;
     int flag_recv = USERNAME;   //标识接收到的是用户名还是密码
     int ret,name_num;
     pid_t pid;
@@ -77,7 +78,7 @@ int main()
     char recv_buf[128];
 
     //创建一个TCP套接字
-    sock_fd = socket( AF_INEF,SOCK_STREAM,0 ); //创建TCP流套接字
+    sock_fd = socket( AF_INET,SOCK_STREAM,0 ); //创建TCP流套接字
     if( sock_fd < 0 )
     {
         my_err( "socket",__LINE__ );
@@ -92,7 +93,7 @@ int main()
 
     //初始化服务器端地质结构
     memset( &serv_addr,0,sizeof(struct sockaddr_in) );
-    serv_addr.sin_family = AF_INEF;
+    serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons( SERV_PORT );  //端口号
     serv_addr.sin_addr.s_addr = htonl( INADDR_ANY ); //即任意地址
 

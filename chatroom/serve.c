@@ -15,6 +15,7 @@
 #include<arpa/inet.h>
 #include<sys/stat.h>
 #include<fcntl.h>
+#include<pthread.h>
 
 #define MAXLINE 20          //listen最大等待队列
 #define PORT 4507           //端口号
@@ -39,6 +40,7 @@ typedef struct c{
     struct c *next;
 }peo;
 
+void *menu();
 void take_out( peo *head );
 int check_login( user *people,peo *head );
 int check_setin( user *people,peo *head );
@@ -46,15 +48,12 @@ void save( peo *head );
 
 int main()
 {
-    pid_t pid;
     pthread_t tid;
-    user people;
     struct sockaddr_in cin,sin;
     socklen_t sin_len;
     int conn_fd,sock_fd;
     
     memset( &cin,0,sizeof(cin) );       //置0
-    memset( &people,0,sizeof(people) );
 
     cin.sin_family = AF_INET;
     cin.sin_port = htons(PORT);
@@ -93,44 +92,76 @@ int main()
         }
         
         printf( "有客户端连接\n" );
-
-        //开辟子进程处理
-        if( (pid = fork()) == 0 )
+        
+       /*struct a{               //用结构体保存传给线程的数据
+            int conn_fd;
+            user people;
+        };
+        struct a m;
+        m.conn_fd = conn_fd;
+        m.people = people;
+*/
+        //开辟辅线程处理
+        if( pthread_create( &tid,NULL,(void *)menu,(void *)&conn_fd ) != 0 )
         {
-            printf( "这里是一个子进程\n" ); //
-            int ret;
-            int flag;
-
-            //接收数据
-            if( (ret = recv(conn_fd,&people,sizeof(user),0)) < 0 )
-            {
-
-                printf( "recv error\n" );
-                exit(0);
-            }
-            peo *head = (peo *)malloc( sizeof(peo) );
-            head->next = NULL;
-
-            take_out(head);
-            if( people.flag == 1 )          //登录
-            {
-                flag = check_login( &people,head );
-                send( conn_fd,(void *)&flag,sizeof(flag),0 );
-                
-            }
-            else if( people.flag == 2 )     //注册
-            {
-                flag = check_setin( &people,head );
-                printf( "%d",flag ); //
-                if( flag == 1 )
-                    save(head);
-                send( conn_fd,(void *)&flag,sizeof(flag),0 );
-            }
-
-            exit(0);
+            printf( "pthread creation failed\n" );
         }
     }
 }
+
+
+void *menu( void *arg )        //主要函数，调用子函数，进行各种功能都在这里调用子函数完成
+{
+    int ret,flag;
+    user people;
+    memset( &people,0,sizeof(people) );
+    int conn_fd = *(int *)arg;
+    /*struct a *m1 = (struct a *)m;
+    int conn_fd = m1->conn_fd;
+    user people = m1->people;*/
+    //接收数据
+    while(1)
+    {
+        if( (ret = recv( conn_fd,(void *)&people,sizeof(user),0 )) < 0 )
+    	{
+        	printf( "recv error\n" );
+            exit(0);
+        }
+        //while( people.login != 2  )
+        if( people.login != 2 )
+        {
+            peo *head = (peo *)malloc( sizeof(peo) );       //peo结构体  建立头节点
+            head->next = NULL;
+
+            take_out(head);     //从文件读取信息到链表
+    
+            if( people.flag == 1 ) //登录
+            {
+                flag = check_login( &people,head );
+                if( flag == 0 )
+                {
+                    memset( &people,0,sizeof(people) );
+                }
+                send( conn_fd,(void *)&flag,sizeof(flag),0 );
+            }
+            else if( people.flag == 2 ) //注册
+            {
+                flag = check_setin( &people,head );
+                if( flag == 1 )     //注册成功了，保存
+                {
+                    save(head);
+                }
+                else
+                {
+                    memset( &people,0,sizeof(people) );
+                }
+                send( conn_fd,(void *)&flag,sizeof(flag),0 );
+            }
+        }
+    }
+    pthread_exit(0);
+}
+
 
 void take_out( peo *head )           //从文件读取信息到链表 
 {
@@ -230,6 +261,6 @@ int check_login( user *people,peo *head )
         return 0;
     }
     printf( "成功登录\n" );
-    //people->login = 2;
+    people->login = 2;
     return 1;
 }

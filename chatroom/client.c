@@ -154,9 +154,9 @@ void menu()             //登录界面
     while(1)
     {
         int n=0;
-        printf( "\n*********************\n\t1.登录\n\t2.注册\n*********************\n" );
+        printf( "\n*********************\n\t1.登录\n\t2.注册\n\t3.按0退出\n*********************\n" );
         scanf( "%d",&choose );
-        while( choose > 2 || choose < 1 )
+        while( choose > 2 || choose < 0 )
         {
             printf( "错误选项，重新选择\n" );
             scanf( "%d",&choose );
@@ -173,6 +173,10 @@ void menu()             //登录界面
         if( choose == 2 ) //注册
         {
             set_in();
+        }
+        if( choose == 0 )
+        {
+            break;
         }
     }
 }

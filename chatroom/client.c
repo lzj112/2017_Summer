@@ -91,7 +91,7 @@ int main()
     
     denglu();  //登录
 
-    pthread_create( &tid,NULL,request,NULL );
+    pthread_create( &tid,NULL,(void *)request,NULL );
 
     while( choose = menu() )    //主界面，各种功能
     {
@@ -134,7 +134,6 @@ int menu()      //主界面
         printf ("\t\t6.摇一摇(附近的人)\n");
         printf( "\t\t按0退出聊天室\n" );
         printf( "\t*****************************************\n" );
-
         printf("menu===\n");
         scanf( "%d",&n );
        while( n>6 || n<0 )
@@ -259,73 +258,26 @@ void denglu()             //登录界面
         }
         if( choose == 0 )
         {
-            break;
+            return ;
         }
     }
 }
 
-void *request()    //接收别的客户端发来的请求 添加好友 聊天什么的
+void *request( void *arg )    //接收别的客户端发来的请求 添加好友 聊天什么的
 {
+    int ret;
     while(1)
     {
-        if( recv( s_fd,(void *)&guy,sizeof(user),0 )  )
+        if( (ret = recv( s_fd,(void *)&guy,sizeof(user),0 )) >0  )
         {
-            printf( "\n--->消息+1>" );
+            printf( "\n--->消息+1>  " );
             if( guy.login == 1 )
             {
-                //printf( "%s wangs to be friend with u~...<---",guy.buf );
+                printf( "fd %d  %s \n",guy.fd,guy.buf );
                 baocun( &guy );
             }
         }
     }
-
-   /* if( guy.login == 1 )
-    {
-    
-
-       /* printf( "%s,请按y或n\n",guy.buf );
-
-        send( s_fd,(void *)&guy,sizeof(user),0 );
-	    if( recv( s_fd,(void *)&guy,sizeof(user),0 ) < 0 )
-        {
-            printf( "case 1 recv error\n" );
-            exit(0);
-        }            
-        pthread_create( &tid,NULL,request,NULL ); 
-            
-        printf( "%s\n",guy.buf ); 
-        if( strcmp(guy.buf,"number error") == 0 )
-        {
-            printf( "\nnumber error\n" );
-        }
-        else if( strcmp(guy.buf,"yes") == 0 )
-        {
-            printf( "成功添加\n" );
-            
-            //保存好友到本地文件
-        
-        }
-        else if( strcmp(guy.buf,"no") == 0 )
-        {
-            printf( "对方拒绝加你为好友\n" );
-        }
-        else 
-        {
-		    printf( "\n%s,请按y或n\n",guy.buf );
-            memset( guy.buf,0,sizeof(guy.buf) );
-            printf( "\n" );
-            //strcpy( guy.buf,"你特么怎么回事" );
-            scanf( "%s\n",guy.buf);
-            printf("buf = %s\n",guy.buf);
-            printf("------------\n");
-            getchar();
-            printf( "\n  asdasdasd    %s    asdasdasd \n",guy.buf );
-            if( send( s_fd,(void *)&guy,sizeof(user),0 ) < 0)
-            {
-                printf( "我就没有发\n" );
-            }
-        }
-    }*/
 }
 
 void baocun( user *guy )
@@ -342,6 +294,7 @@ void baocun( user *guy )
 void xiaoxi()   //在主线程处理服务器发来的消息
 {
     int n;
+    news *p ;
     while(1)
     {
         printf("\n\t1.好友添加\n\t2.私聊\n\t3.群聊\n\t4.按零退出返回上一级菜单\n");
@@ -361,12 +314,12 @@ void xiaoxi()   //在主线程处理服务器发来的消息
         if( n == 1 )   //处理好友添加的请求
         {
             int t;
-            news *p = head->next;
-            while( p->next )
+            p = head->next;
+            while( p)
             {
                 if( p->flag == 1 )
                 {
-                    printf( "\n编号:%d\n%s\n",p->fd,p->buf );
+                    printf( "\n<%d> :  %s\n",p->fd,p->buf );
                 }
                 p = p->next;
             }
@@ -376,7 +329,8 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             {
                 return ;
             }
-            while( p->next )
+            p = head->next;
+            while( p )
             {
                 if( p->fd == t )
                 {
@@ -384,11 +338,11 @@ void xiaoxi()   //在主线程处理服务器发来的消息
                 }
                 p = p->next;
             }
-            printf( "\n%s\n",p->buf );
+            printf( "\n%s please input 'y' or 'n'\n",p->buf );
             memset(guy.buf,0,sizeof(guy.buf));
             scanf( "%s",guy.buf );
             //guy.fd = p->fd;
-            printf( "--------a----->%s\n",guy.buf );
+            guy.login = 11;
             send( s_fd,(void *)&guy,sizeof(user),0 );
         }
     }

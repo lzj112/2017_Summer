@@ -47,12 +47,14 @@ typedef struct c{
 peo *head;
 pthread_mutex_t mutex;
 
-void *menu();
+void zaixian( int conn_fd );
+void reply( user *people );
 void take_out( peo *head );
 int check_login( user *people,peo *head,int conn_fd );
 int check_setin( user *people,peo *head );
 void save( peo *head );
 void tianjia( user *people,peo *head,int conn_fd );
+void *menu();
 
 int main()
 {
@@ -123,7 +125,6 @@ int main()
     }
 }
 
-
 void *menu( void *arg )        //主要函数，调用子函数，进行各种功能都在这里调用子函数完成
 {
     int ret,flag;
@@ -132,14 +133,19 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
     int conn_fd = *(int *)arg;
     
     
+    
     //接收数据
     while(1)
     {
-        if( (ret = recv( conn_fd,(void *)&people,sizeof(user),0 )) < 0 )
+        if( (ret = recv( conn_fd,(void *)&people,sizeof(user),0 )) <= 0 )    //接受信息
     	{
             if( errno == EINTR )
-            	printf( "recv error\n" );
-            //判断不在线的函数
+            	printf( "接收信号返回　仍然正常\n" );
+            else
+            {
+                zaixian(conn_fd);
+                pthread_exit(0);
+            }
         }
         if( people.login == 2 )
         {
@@ -169,10 +175,8 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
         }
 
         
-        if( people.login == 1 )         //请求添加好友
+        if( people.login == 1 || people.login == 11 )         //请求添加好友
         {
-           // printf( "%s",people.buf );
-          //  pthread_mutex_init(&mutex,NULL);
             tianjia(&people,head,conn_fd);
         }
     }
@@ -281,15 +285,71 @@ int check_login( user *people,peo *head,int conn_fd )       //登录
     return 1;
 }
 
+void  zaixian( int conn_fd )         //若有用户下线　链表里的fd置为-1
+{
+    peo *p = head->next;
+    while( p->next )
+    {
+        if( p->fd == conn_fd )
+        {
+            break;
+        }
+        p = p->next;
+    }
+    p->fd = -1;
+    p->flag = 0;
+}
+
+
+
+void  reply( user *people )     //对于添加好友的回复
+{
+    printf( "这里是reply\n" );
+    peo *p = head->next;
+    people->login = 1;
+    
+    while( p )
+    {
+        if( p->fd == people->fd )
+        {
+            break;
+        }
+        p = p->next;
+    }
+
+    if( strcmp(people->buf,"y") == 0 )
+    {
+        memset( people->buf,0,sizeof(people->buf) );
+        strcpy(people->buf,"你已经添加");
+        strcat(people->buf,p->number);
+        strcat(people->buf,"为好友");
+        send(people->fd,people,sizeof(user),0);
+    }
+    else if( strcmp(people->buf,"n") == 0 )
+    {
+        memset( people->buf,0,sizeof(people->buf) );
+        strcpy(people->buf,"你被");
+        strcat(people->buf,p->number);
+        strcat(people->buf,"丑拒了");
+        send( people->fd,people,sizeof(user),0 );
+    }
+        
+}
+
+
 void tianjia( user *people,peo *head,int conn_fd )      //添加好友
 {
 
-    //  pthread_mutex_lock(&mutex);
+    if( people->login == 11 )
+    {
+        reply( people );
+        return ;
+    }
     int t = 0;
     peo *p = head->next;
-    while( p->next )        //找到该账号
+    while( p )        //找到该账号
     {
-        if( strcmp( p->number,people->buf ) == 0 )              //第二次传回来y or n的时候还是进来找，这样不对
+        if( strcmp( p->number,people->buf ) == 0 )          
         {
             t = 1;
             break;
@@ -309,40 +369,11 @@ void tianjia( user *people,peo *head,int conn_fd )      //添加好友
         strcat( people->buf,people->number );
         people->fd = conn_fd;
 
-       strcat( people->buf," wants to be friend with u~ please input 'y' or 'n'" );
-      //  printf( "----->%s\n",people->buf );
-       
-        printf( "p->fd %d  conn_fd %d people->fd%d\n",p->fd,conn_fd,people->fd ); //
-
+       strcat( people->buf," wants to be friend with u~" );
+    
         if( send( p->fd,people,sizeof(user),0 ) < 0) //给想添加的账号发送请求
         {
             printf( "niang类 原来是这里错了\n" );
         }
-        if( recv( p->fd,people,sizeof(user),0 ) < 0 )
-        {
-            printf( "没收到啊\n" );
-        }
-        
-        printf( "发回来的%d  %s\n",people->fd,people->buf ); //
-        if( strcmp(people->buf,"y") == 0 )
-        {
-            memset( people->buf,0,sizeof(people->buf) );
-            strcpy(people->buf,"你已经添加");
-            strcat(people->buf,p->number);
-            strcat(people->buf,"为好友");
-            send(people->fd,people,sizeof(user),0);
-        }
-        else if( strcmp(people->buf,"n") == 0 )
-        {
-            memset( people->buf,0,sizeof(people->buf) );
-            strcpy(people->buf,"你被");
-            strcat(people->buf,p->number);
-            strcat(people->buf,"丑拒了");
-            send( people->fd,people,sizeof(user),0 );
-        }
-        
     }
-    /*pthread_mutex_unlock( &mutex );
-    pthread_mutex_destroy( &mutex );*/
 }
-

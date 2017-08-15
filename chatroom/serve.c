@@ -49,7 +49,7 @@ typedef struct c{        //所有在线用户的信息
 }peo;
 
 typedef struct d{         //用户的离线消息
-    char buf[MAXLINE];
+    char buf[4096];
     struct d *next;
 }off;
 
@@ -65,7 +65,7 @@ void wenjian1( char *number );
 void look_fri();
 void send_offline( int conn_fd );
 void take_offline( char *number );
-void off_line( user *people );
+void off_line( user *people,char *number );
 int check_friend( char *number );
 int check_line( char *number );
 void take_friend( char *p );
@@ -155,11 +155,11 @@ int main()
 
 void *menu( void *arg )        //主要函数，调用子函数，进行各种功能都在这里调用子函数完成
 {
+    printf( "\n" );
     int ret,flag;
     memset( &people,0,sizeof(people) );
     int conn_fd = *(int *)arg;
     strcpy( number,people.number );
-
 
     //接收数据
     while(1)
@@ -174,7 +174,6 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
                 pthread_exit(0);
             }
         }
-        
         if( people.login == 2 )   //请求登录注册
         {
             if( people.flag == 1 ) //登录
@@ -184,7 +183,25 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
                 {
                     memset( &people,0,sizeof(people) );
                 }
-                send( conn_fd,(void *)&flag,sizeof(flag),0 );
+                else 
+                {
+                    send( conn_fd,(void *)&flag,sizeof(flag),0 );
+                    take_offline( people.number );   //检查离线消息
+                    if( ohead->next != NULL )
+                    {
+                        memset( people.buf,0,sizeof(people.buf) );
+                        off *p = ohead->next;
+                        people.login = 0;
+                        while(p) 
+                        {
+                            memset( people.buf,0,sizeof(people.buf) );
+                            strcpy( people.buf,p->buf );
+                            p = p->next;
+                            printf( "====%s=== \n",people.buf );
+                            send( conn_fd,(void *)&people,sizeof(people),0 );
+                        }
+                    }
+                }
             }
             
             else if( people.flag == 2 ) //注册
@@ -305,7 +322,6 @@ int check_login( user *people,int conn_fd )       //登录
 {
     int flag = 0;
     peo *p = head->next;
-
     while( p)
     {
         if( (strcmp(p->number,people->number)) == 0 )       //账号存在
@@ -334,13 +350,7 @@ int check_login( user *people,int conn_fd )       //登录
     
     wenjian1( p->number );   
     wenjian2( p->number );
-   // take_friend( p->number );        //从文件读取该用户的好友
     
-    take_offline( p->number );       //检查是否有离线消息
-    if( ohead->next != NULL )        //存在离线消息
-    {
-        send_offline( conn_fd ); 
-    }
     p->flag = 1;   //登陆成功即在线
    
     p->fd = conn_fd;  //保存套接字
@@ -468,7 +478,8 @@ void tianjia( user *people,int conn_fd )      //添加好友
         }
         if( ret == 0 )    //离线，把消息存起来
         {
-            off_line( people );
+
+            off_line( people,p->number );
             return ;
         }
     
@@ -540,11 +551,11 @@ int check_friend( char *number )          //检查是否已经添加对方为好
     return 0;
 }
 
-void off_line( user *people )     //保存该用户离线消息到文件
+void off_line( user *people,char *number )     //保存该用户离线消息到文件
 {
     char p[50]={0};
-    strcpy( p,people->number );
-    strcpy( p,"off-line" );
+    strcpy( p,number );
+    strcat( p,"off-line" );
     FILE *fp;
     fp = fopen( p,"w" );
     if( fp == NULL )
@@ -557,13 +568,16 @@ void off_line( user *people )     //保存该用户离线消息到文件
 
 void take_offline( char *number )           //从文件读取离线信息到链表
 {
+    char ch;
+    int i = 0;
     char p[50]={0};
     strcpy( p,number );
     strcat( p,"off-line" );
 
-    off *p1,*p2;
-    p2 = p1 = (off *)malloc( sizeof(off) );
-    ohead->next = p1;
+    off *p1,*p2,*p3;
+    p1 = (off *)malloc( sizeof(off) );
+    p2 = ohead;
+    p3 = ohead;
     
     int t = 0;
     FILE *fp;
@@ -574,36 +588,26 @@ void take_offline( char *number )           //从文件读取离线信息到链�
     }
 
     rewind(fp);
-    while( fscanf( fp,"%s",p1->buf ) != EOF )
+   // memset( people.buf,0,sizeof(people.buf) );
+    while( fscanf( fp,"\n%[^\n]",p1->buf ) != EOF )
     {
         t = 1;
-        p1 = (off *)malloc( sizeof(off) );
         p2->next = p1;
         p2 = p1;
+        p1 = (off *)malloc( sizeof(off) );
+        p3 = p3->next;
     }
-    p1 = NULL;
-    p2 = NULL;
-
     if( t == 0 )
     {
         ohead->next = NULL;
     }
+    p3->next = NULL;
+    p1 = NULL;
+    p2->next = NULL;
 
     fclose( fp );
 }
 
-void send_offline( int conn_fd )        //发送离线消息到该用户
-{
-    off *p = ohead->next;
-    while( p )
-    {
-        memset( people.buf,0,sizeof(people.buf) );
-        strcpy(people.buf,p->buf);
-        send( conn_fd,(void *)&people,sizeof(user),0);
-        p = p->next;
-    }
-    memset( people.buf,0,sizeof(people.buf) );
-}
 
 void look_fri()         //把好友信息放到buf里
 {

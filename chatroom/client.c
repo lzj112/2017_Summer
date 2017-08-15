@@ -145,12 +145,13 @@ int menu()      //主界面
     int n;
 
         printf( "\n\t*****************************************\n" );
-        printf( "\t\t1.增删好友\n" );
+        printf( "\t\t1.添加好友\n" );
         printf( "\t\t2.打开好友列表\n" );
         printf( "\t\t3.发起私聊\n" );
         printf( "\t\t4.发起群聊\n" );
         printf( "\t\t5.消息管理\n" );
         printf ("\t\t6.摇一摇(附近的人)\n");
+        printf( "\t\t7.删除好友\n" );
         printf( "\t\t按0退出聊天室\n" );
         printf( "\t*****************************************\n" );
         printf("menu===\n");
@@ -173,7 +174,8 @@ int log_in()   //登录
     scanf( "%s",guy.number );
     printf( "\t\n请输入密码：\n" );
     scanf( "%s",guy.passwd );
-
+    
+    printf( "%s %s\n",guy.number,guy.passwd);
     if( send(s_fd,(void *)&guy,sizeof(user),0) < 0 )         //发送
     {
         printf( "client send error\n" );
@@ -288,7 +290,7 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
     {
         if( (ret = recv( s_fd,(void *)&guy,sizeof(user),0 )) >0  )
         {
-            if( guy.login == 1 )
+            if( guy.login == 1 )  //有好友添加信息
             {
                 printf( "\n--->消息+1>  " );
                 printf( "%s \n",guy.buf );
@@ -301,9 +303,15 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
                 printf( "\n--->消息+1>  " );
                 printf( "%s\n",guy.buf );
             }
-            if( guy.login == 22 )
+            if( guy.login == 22 )     //展示好友
             {
+                printf( "你的好友有：\n" );
                 printf( "%s",guy.buf );
+            }
+            if( guy.login == 0 )   //有离线消息
+            {
+                printf("<离线消息++>\n");
+                baocun( &guy );
             }
         }
     }
@@ -311,6 +319,7 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
 
 void baocun( user *guy )
 {
+   // printf( "--%d----%s<\n",guy->login,guy->buf );
     p1 = (news *)malloc( sizeof(news) );
     p2->next = p1;
     p1->flag = guy->login;
@@ -318,19 +327,22 @@ void baocun( user *guy )
     strcpy( p1->buf,guy->buf );
     p2 = p1;
     p1->next = NULL;
+    p2->next = NULL;
 }
 
 void xiaoxi()   //在主线程处理服务器发来的消息
 {
+    int t;
     int n;
     news *p ;
     while(1)
     {
-        printf("\n\t1.好友添加\n\t2.私聊\n\t3.群聊\n\t4.按零退出返回上一级菜单\n");
+        printf("\n********************\n\t1.好友添加\n\t2.私聊\n\t3.群聊\n\t4.离线消息\n\t5.按零退出返回上一级菜单\n");
         scanf( "%d",&n );
         getchar();
-        while( n>3 || n<0 )
+        while( n>4 || n<0 )
         {
+            printf( "错误选项\n" );
             scanf( "%d",&n );
             getchar();
         }
@@ -373,5 +385,17 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             guy.login = 11;
             send( s_fd,(void *)&guy,sizeof(user),0 );
         }
+
+        if( n == 4 )  //离线消息
+        {
+            p = head->next;
+            while( p )
+            {
+                if( p->flag == 0 )
+                    printf( "%s\n",p->buf );
+                p = p->next;
+            }
+        }
     }
 }
+

@@ -47,7 +47,7 @@ int flag;  //判断客户端是否收到了服务器发来的消息
 
 int log_in();
 void set_in();
-void denglu();
+int denglu();
 int menu();
 void *request();
 void baocun( user *guy );
@@ -62,7 +62,7 @@ int main()
 {
     signal( SIGPIPE,SIG_IGN );
     struct sockaddr_in sin;
-    int n,choose;
+    int n,choose,ret;
     
     memset( &guy,0,sizeof(guy) );   //两个结构体置0
     memset( &sin,0,sizeof(sin) );
@@ -82,14 +82,17 @@ int main()
         exit(0);
     }
     
-  //  printf( "-->%d<--\n",s_fd ); //
     if( connect(s_fd,(struct sockaddr *)&sin,sizeof(sin)) )     //连接
     {
         printf( "connect error\n" );
         exit(0);
     }
     
-    denglu();  //登录
+    ret = denglu();  //登录
+    if( ret == 0 )
+    {
+        return 0;
+    }
 
     pthread_create( &tid,NULL,(void *)request,NULL );
 
@@ -104,12 +107,23 @@ int main()
             {
                 printf( "\n请输入添加账号：" );
                 scanf( "%s",guy.buf );       //输入要添加的账号
+                if( strcmp(guy.buf,guy.number) == 0 )
+                {
+                    printf( "长点心　这是你自己...\n" );
+                    break;
+                }
                 guy.login = 1;
                 if( send( s_fd,(void *)&guy,sizeof(guy),0 ) < 0 )
                 {
                     printf( "case 1 send error\n" );
                     exit(0);
                 }
+                break;
+            }
+            case 2:
+            {
+                guy.login = 22;
+                send( s_fd,(void *)&guy,sizeof(guy),0 );
                 break;
             }
             case 5:
@@ -166,7 +180,6 @@ int log_in()   //登录
         printf( "client recv error\n" );
         exit(0);
     }
-
     if( flag == 1 )
     {
         printf( "\n登陆成功\n" );
@@ -203,7 +216,6 @@ void set_in()       //注册
             exit(0);
         }
        
-      //  printf( "--->%d<---\n",flag ); //  
         if( flag == 1 )
         {
             printf( "\n\t注册成功\n" );
@@ -227,7 +239,7 @@ void set_in()       //注册
 
 
 
-void denglu()             //登录界面
+int denglu()             //登录界面
 {
     int choose;
     while(1)
@@ -258,9 +270,10 @@ void denglu()             //登录界面
         }
         if( choose == 0 )
         {
-            return ;
+            return 0;
         }
     }
+    return 1;
 }
 
 void *request( void *arg )    //接收别的客户端发来的请求 添加好友 聊天什么的
@@ -273,7 +286,7 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
             printf( "\n--->消息+1>  " );
             if( guy.login == 1 )
             {
-                printf( "fd %d  %s \n",guy.fd,guy.buf );
+                printf( "%s \n",guy.buf );
                 baocun( &guy );
             }
         }
@@ -341,7 +354,6 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             printf( "\n%s please input 'y' or 'n'\n",p->buf );
             memset(guy.buf,0,sizeof(guy.buf));
             scanf( "%s",guy.buf );
-            //guy.fd = p->fd;
             guy.login = 11;
             send( s_fd,(void *)&guy,sizeof(user),0 );
         }

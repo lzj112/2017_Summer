@@ -35,7 +35,6 @@ typedef struct b{           //用户各种信息
 }user;
 
 typedef struct a{       //每个人的好友
-    int fd;
     char number[10];
     struct a *next;
 }fri;
@@ -58,6 +57,8 @@ user people;
 peo *head;
 fri *phead;
 off *ohead;
+char number[50];  //备份自己账号
+
 
 void wenjian2( char *number );
 void wenjian1( char *number );
@@ -157,6 +158,8 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
     int ret,flag;
     memset( &people,0,sizeof(people) );
     int conn_fd = *(int *)arg;
+    strcpy( number,people.number );
+
 
     //接收数据
     while(1)
@@ -171,7 +174,7 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
                 pthread_exit(0);
             }
         }
-
+        
         if( people.login == 2 )   //请求登录注册
         {
             if( people.flag == 1 ) //登录
@@ -183,6 +186,7 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
                 }
                 send( conn_fd,(void *)&flag,sizeof(flag),0 );
             }
+            
             else if( people.flag == 2 ) //注册
             {
                 flag = check_setin( &people );
@@ -202,10 +206,12 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
         {
             tianjia(&people,conn_fd);
         }
-
+        
         if( people.login == 22 )    //请求展示好友列表
         {
+            take_friend( people.number );        //从文件读取该用户的好友
             look_fri();
+            printf( "%d %s",people.login,people.buf );
             send( conn_fd,(void *)&people,sizeof(people),0 );
         }
     }
@@ -328,7 +334,7 @@ int check_login( user *people,int conn_fd )       //登录
     
     wenjian1( p->number );   
     wenjian2( p->number );
-    take_friend( p->number );        //从文件读取该用户的好友
+   // take_friend( p->number );        //从文件读取该用户的好友
     
     take_offline( p->number );       //检查是否有离线消息
     if( ohead->next != NULL )        //存在离线消息
@@ -379,7 +385,6 @@ int check_line( char *number )     //检查对方是否离线
 void  reply( user *people )     //对于添加好友的回复
 {
     peo *p = head->next;
-    people->login = 1;
     
     while( p )
     {
@@ -393,10 +398,11 @@ void  reply( user *people )     //对于添加好友的回复
     if( strcmp(people->buf,"y") == 0 )
     {
         save_friend( people->number,p->number );    //保存他到你的好友
+        save_friend( p->number,people->number );
 
         memset( people->buf,0,sizeof(people->buf) );
         strcpy(people->buf,"你已经添加");
-        strcat(people->buf,p->number);
+        strcat(people->buf,people->number);
         strcat(people->buf,"为好友");
         send(people->fd,people,sizeof(user),0);
     }
@@ -404,7 +410,7 @@ void  reply( user *people )     //对于添加好友的回复
     {
         memset( people->buf,0,sizeof(people->buf) );
         strcpy(people->buf,"你被");
-        strcat(people->buf,p->number);
+        strcat(people->buf,people->number);
         strcat(people->buf,"丑拒了");
         send( people->fd,people,sizeof(user),0 );
     }
@@ -476,17 +482,19 @@ void tianjia( user *people,int conn_fd )      //添加好友
 void save_friend( char *number,char *friend )      //保存每个账号的好友到文件
 {
     FILE *fp;
-    fp = fopen( number,"a" );
+    fp = fopen( number,"a+" );
     if( fp == NULL )
     {
         printf( "save_friend fopen error\n" );
         return ;
     }
     fprintf( fp,"%s\n",friend );
+    fclose( fp );
 }
 
 void  take_friend( char *p )         //从文件读取每个人的好友
 {
+    int t = 0;
     FILE *fp;
 	fp=fopen( p,"r" );
 	if(fp == NULL)
@@ -494,16 +502,24 @@ void  take_friend( char *p )         //从文件读取每个人的好友
 		printf("take_friend error\n");
 		return ;
 	}
-	fri *p1,*p2;
+	fri *p1,*p2,*p3;
 	p2=p1=(fri *)malloc( sizeof(fri) );
 	phead->next = p1;
+    p3 = phead;
     rewind( fp );    //确保文件指针在开头
-	while( fscanf(fp,"%d %s",&p1->fd,p1->number) != EOF )
+	while( fscanf(fp,"%s",p1->number) != EOF )
 	{
+        t = 1;
 		p1=(fri *)malloc( sizeof(fri) );
 		p2->next = p1;
 		p2=p1;
+        p3 = p3->next;
 	}
+    if( t == 0 )
+    {
+        phead->next = NULL;
+    }
+    p3->next = NULL;
     p1 = NULL;
     p2 = NULL;
     fclose(fp);
@@ -606,7 +622,13 @@ void wenjian1( char *number )  //检查有没有存离线消息和好友的文�
     char p[50]={0};
     strcpy( p,number );
     FILE *fp;
-    fp = fopen( p,"w+" );
+    if( (fp = fopen(p,"r")) == NULL )
+    {
+        fp = fopen( p,"wa+" );
+        fclose(fp);
+   }
+    else
+        return ;
 }
 void wenjian2( char *number )
 {
@@ -614,7 +636,11 @@ void wenjian2( char *number )
     strcpy( p,number );
     strcat( p,"off-line" );
     FILE *fp;
-    fp = fopen( p,"w+" );
-    fclose(fp);
-
+    if(( fp = fopen( p,"r" )) == NULL)
+    {
+        fp = fopen( p,"w+" );
+        fclose( fp );
+    }
+    else 
+    return ;
 }

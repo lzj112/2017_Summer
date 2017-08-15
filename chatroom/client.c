@@ -57,6 +57,7 @@ pthread_t tid;
 int s_fd;
 user guy;
 news *head,*p1,*p2; 
+char number[50];      //备份账号
 
 int main()
 {
@@ -89,6 +90,10 @@ int main()
     }
     
     ret = denglu();  //登录
+
+    strcpy( number,guy.number );
+
+
     if( ret == 0 )
     {
         return 0;
@@ -283,11 +288,22 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
     {
         if( (ret = recv( s_fd,(void *)&guy,sizeof(user),0 )) >0  )
         {
-            printf( "\n--->消息+1>  " );
             if( guy.login == 1 )
             {
+                printf( "\n--->消息+1>  " );
                 printf( "%s \n",guy.buf );
+                memset( guy.number,0,sizeof(guy.number) );
+                strcpy( guy.number,number );
                 baocun( &guy );
+            }
+            else if( guy.login == 11 )
+            {
+                printf( "\n--->消息+1>  " );
+                printf( "%s\n",guy.buf );
+            }
+            if( guy.login == 22 )
+            {
+                printf( "%s",guy.buf );
             }
         }
     }

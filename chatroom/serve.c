@@ -31,6 +31,7 @@ typedef struct b{           //用户各种信息
     char name[50];
     char number[10];
     char passwd[20];
+    char object[10];
     char buf[4096];
 }user;
 
@@ -53,6 +54,7 @@ typedef struct d{         //用户的离线消息
     struct d *next;
 }off;
 
+time_t *timep;
 user people;
 peo *head;
 fri *phead;
@@ -60,6 +62,8 @@ off *ohead;
 char number[50];  //备份自己账号
 
 
+void del_friend( char *number,char *nofri );
+void private_chat();
 void wenjian2( char *number );
 void wenjian1( char *number );
 void look_fri();
@@ -197,7 +201,6 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
                             memset( people.buf,0,sizeof(people.buf) );
                             strcpy( people.buf,p->buf );
                             p = p->next;
-                            printf( "====%s=== \n",people.buf );
                             send( conn_fd,(void *)&people,sizeof(people),0 );
                         }
                     }
@@ -228,8 +231,20 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
         {
             take_friend( people.number );        //从文件读取该用户的好友
             look_fri();
-            printf( "%d %s",people.login,people.buf );
             send( conn_fd,(void *)&people,sizeof(people),0 );
+        }
+
+        if( people.login == 3 )  //请求私聊
+        {
+            private_chat();
+        }
+
+        if( people.login == 7 ) //请求删除好友
+        {
+            take_friend( people.number );
+            del_friend( people.number,people.buf );
+            take_friend( people.number );
+            del_friend( people.buf,people.number );
         }
     }
     pthread_exit(0);
@@ -588,7 +603,6 @@ void take_offline( char *number )           //从文件读取离线信息到链�
     }
 
     rewind(fp);
-   // memset( people.buf,0,sizeof(people.buf) );
     while( fscanf( fp,"\n%[^\n]",p1->buf ) != EOF )
     {
         t = 1;
@@ -604,7 +618,8 @@ void take_offline( char *number )           //从文件读取离线信息到链�
     p3->next = NULL;
     p1 = NULL;
     p2->next = NULL;
-
+    
+    fp = fopen( p,"w+" );
     fclose( fp );
 }
 
@@ -640,11 +655,82 @@ void wenjian2( char *number )
     strcpy( p,number );
     strcat( p,"off-line" );
     FILE *fp;
-    if(( fp = fopen( p,"r" )) == NULL)
+    if( (fp = fopen( p,"r" )) == NULL )
     {
         fp = fopen( p,"w+" );
         fclose( fp );
     }
-    else 
+
     return ;
+}
+
+void private_chat()     //私聊
+{
+    int ret;
+    peo *p = head->next;
+    char tmp[4096],*s;
+    timep = malloc( sizeof(*timep) );  //获取当前时间 
+    time( timep );
+    s = ctime( timep ); 
+    while( p )
+    {
+        if( strcmp( p->number,people.object ) == 0 )
+        {
+            break;
+        }
+        p = p->next;
+    }
+    memset( tmp,0,sizeof(tmp));
+    strcpy( tmp,s );
+    strcat( tmp,"  " );
+    strcat( tmp,people.number );
+    strcat( tmp,"  says:   " );
+    strcat( tmp,people.buf );
+    strcpy( people.buf,tmp );
+
+    ret = check_line( p->number );   //检查是否在线
+    if( ret == 0 )
+    {
+        off_line( &people,p->number );
+        return ;
+    }
+    send( p->fd,(void *)&people,sizeof(people),0 );  //在线就发送
+    
+}
+
+void del_friend( char *number,char *nofri )     //删除好友
+{
+
+    FILE *fp;
+    fp = fopen( number,"w" );
+    int t = 0;
+    fri *p1 = phead->next;
+    fri *p2 = phead;
+    fri *p3 = phead->next;
+    while( p1 )
+    {
+        if( strcmp( p1->number,number ) == 0 )
+        {
+            t = 1;
+            break;
+        }
+        p1 = p1->next;
+        p2 = p2->next;
+    }
+    if( t == 0 )
+    {
+        return ;
+    }
+    else
+    {
+        p2->next = p1->next;
+        free( p1 );
+    }
+    
+    while( p3 )
+    {
+        fprintf( fp,"%s\n",p3->number );
+        p3 = p3->next;
+    }
+
 }

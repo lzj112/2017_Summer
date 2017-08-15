@@ -30,6 +30,7 @@ typedef struct a{
     char name[50];      //昵称
     char number[10];    //账号
     char passwd[20];    //密码
+    char object[10];    //聊天对象
     char buf[MAXLEN];   //输入
 }user;
  
@@ -45,6 +46,10 @@ typedef struct b{
 
 int flag;  //判断客户端是否收到了服务器发来的消息
 
+
+void look_record( );
+void del_friend();
+void person_chat();
 int log_in();
 void set_in();
 int denglu();
@@ -108,7 +113,7 @@ int main()
         {
             case 0:
                 break;
-            case 1:
+            case 1: //添加好友
             {
                 printf( "\n请输入添加账号：" );
                 scanf( "%s",guy.buf );       //输入要添加的账号
@@ -125,15 +130,26 @@ int main()
                 }
                 break;
             }
-            case 2:
+            case 2:         //好友列表
             {
                 guy.login = 22;
                 send( s_fd,(void *)&guy,sizeof(guy),0 );
                 break;
             }
+            case 3:         //私聊
+            {
+                person_chat();
+                break;
+            }
             case 5:
             {
                 xiaoxi();
+                break;
+            }
+            case 7:
+            {
+                del_friend();
+                break;
             }
         }
     }
@@ -156,7 +172,7 @@ int menu()      //主界面
         printf( "\t*****************************************\n" );
         printf("menu===\n");
         scanf( "%d",&n );
-       while( n>6 || n<0 )
+       while( n>7 || n<0 )
        {
            printf( "错误选项，重新选择\n" );
            scanf( "%d",&n );
@@ -313,13 +329,18 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
                 printf("<离线消息++>\n");
                 baocun( &guy );
             }
+            if( guy.login == 3 )  //私聊消息
+            {
+                printf( "<私聊消息++>\n" );
+                baocun( &guy );
+            }
         }
     }
 }
 
-void baocun( user *guy )
+void baocun( user *guy )   //保存服务器发来的信息
 {
-   // printf( "--%d----%s<\n",guy->login,guy->buf );
+    //printf( "%d %s\n",guy->login,guy->buf );
     p1 = (news *)malloc( sizeof(news) );
     p2->next = p1;
     p1->flag = guy->login;
@@ -385,6 +406,20 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             guy.login = 11;
             send( s_fd,(void *)&guy,sizeof(user),0 );
         }
+        
+        if( n == 2 )        //私聊消息
+        {
+            p = head->next;
+            while( p )
+            {
+                if( p->flag == 3 )
+                {
+                    printf( "%s\n",p->buf );
+                }
+                p = p->next;
+            }
+            break;
+        }
 
         if( n == 4 )  //离线消息
         {
@@ -398,4 +433,38 @@ void xiaoxi()   //在主线程处理服务器发来的消息
         }
     }
 }
+
+void person_chat()  //私聊
+{
+    guy.login = 3;
+    printf( "\n********************************\n\tu are talkinggggg~\n" );
+    printf( "选择聊天对象的账号:\n" );
+    scanf( "%s",guy.object );
+    getchar();
+    printf( "输入内容:" );
+    fgets( guy.buf,MAXLEN,stdin );
+    send( s_fd,(void *)&guy,sizeof(user),0 );
+}
+
+void del_friend()     //删除好友
+{
+    char ch;
+    guy.login = 7;
+    printf( "输入删除好友账号:\n" );
+    scanf( "%s",guy.buf );
+    getchar();
+    
+    printf( "你确认要删除它么 'y' or 'n'\n" );
+    ch = getchar();
+    if( ch == 'n' )
+    {
+        return ;
+    }
+    if( ch == 'y' )
+    {
+        send( s_fd,(void *)&guy,sizeof(guy),0 );
+    }
+}
+
+//void look_record(  )  //查看聊天记录
 

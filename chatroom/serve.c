@@ -40,6 +40,10 @@ typedef struct a{       //每个人的好友
     struct a *next;
 }fri;
 
+typedef struct e{           //群内成员
+    char number[10];
+    struct e *next;
+}gro;
 
 typedef struct c{        //所有在线用户的信息
     int fd;
@@ -59,12 +63,17 @@ user people;
 peo *head;
 fri *phead;
 off *ohead;
+gro *ghead;
 char number[50];  //备份自己账号
 
 
+
+void take_group();
+void group_chat();
 void save_log( char *number );
 void del_friend( char *number,char *nofri );
 void private_chat();
+void wenjian3( char *number );
 void wenjian2( char *number );
 void wenjian1( char *number );
 void look_fri();
@@ -105,6 +114,8 @@ int main()
     phead->next = NULL;
     ohead = (off *)malloc( sizeof(off) );
     ohead->next = NULL;
+    ghead = (gro *)malloc( sizeof(gro) );
+    ghead->next = NULL;
 
     take_out();  //创建链表取出用户信息存入
     int count = 0; 
@@ -244,6 +255,12 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
         if( people.login == 3 )  //请求私聊
         {
             private_chat();
+        }
+        
+        if( people.login == 43)  //请求群聊
+        {
+            take_group();
+            group_chat();
         }
 
         if( people.login == 7 ) //请求删除好友
@@ -646,7 +663,7 @@ void look_fri()         //把好友信息放到buf里
     }
 }
 
-void wenjian1( char *number )  //检查有没有存离线消息和好友的文件没有就创建
+void wenjian1( char *number )  //该文件存放好友账号
 {
     char p[50]={0};
     strcpy( p,number );
@@ -654,12 +671,10 @@ void wenjian1( char *number )  //检查有没有存离线消息和好友的文�
     if( (fp = fopen(p,"r")) == NULL )
     {
         fp = fopen( p,"wa+" );
-        fclose(fp);
-   }
-    else
-        return ;
+    }
+    fclose(fp);
 }
-void wenjian2( char *number )
+void wenjian2( char *number )       //该文件存放离线消息
 {
     char p[50]={0};
     strcpy( p,number );
@@ -668,10 +683,20 @@ void wenjian2( char *number )
     if( (fp = fopen( p,"r" )) == NULL )
     {
         fp = fopen( p,"w+" );
-        fclose( fp );
     }
-
-    return ;
+    fclose(fp);
+}
+void wenjian3( char *number )    //该文件存放群成员
+{
+    char p[50] = {0};
+    strcpy( p,number );
+    strcat( p,"group" );
+    FILE *fp;
+    if( (fp = fopen(p,"r")) == NULL )
+    {
+        fp = fopen( p,"w+" );
+    }
+    fclose(fp);
 }
 
 void private_chat()     //私聊
@@ -767,4 +792,56 @@ void save_log( char *number )    //日志文件
     fprintf( fp,"%s\n",tmp );
     fclose(fp);
     return ;
+}
+
+void take_group()   //取出群成员
+{
+    FILE *fp;
+    char p[50] = {0};
+    int t = 0;
+
+    gro *p1 = (gro *)malloc( sizeof(gro) );
+    p1->next = NULL;
+    gro *p2 = ghead;
+    gro *p3 = ghead;
+
+    strcpy( p,people.object );
+    strcat( p,"group" );
+    
+    fp = fopen( p,"r" );
+    if( fp == NULL )
+    {
+        printf ("group_chat fopen error \n");
+    }
+    while( fscanf( fp,"%s",p1->number ) != EOF )
+    {
+        t = 1;
+        p2->next = p1;
+        p2 = p1;
+        p1 = (gro *)malloc( sizeof(gro) );
+        p3 = p3->next;
+    }
+    if( t == 0 )
+    {
+        ghead->next = NULL;
+    }
+    p1 = NULL;
+    p2->next = NULL;
+    p3->next = NULL;
+
+    fclose( fp );
+}
+
+void group_chat()           //群聊
+{
+    gro *p = ghead->next;
+    char buf[4096];
+    strcpy( buf,people.buf );
+    while( p )
+    {
+        strcpy( people.buf,buf );
+        strcpy( people.object,p->number );
+        private_chat();
+        p = p->next;
+    }
 }

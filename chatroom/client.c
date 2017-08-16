@@ -47,7 +47,8 @@ typedef struct b{
 int flag;  //判断客户端是否收到了服务器发来的消息
 
 
-void look_record( );
+void group_chat();
+void look_precord( );
 void del_friend();
 void person_chat();
 int log_in();
@@ -141,12 +142,17 @@ int main()
                 person_chat();
                 break;
             }
-            case 5:
+            case 4:         //群聊
+            {
+                group_chat();
+                break;
+            }
+            case 5:   //消息管理
             {
                 xiaoxi();
                 break;
             }
-            case 7:
+            case 7:        //删除好友
             {
                 del_friend();
                 break;
@@ -264,18 +270,19 @@ void set_in()       //注册
 
 int denglu()             //登录界面
 {
-    int choose;
+    char ch[50];
     while(1)
     {
         int n=0;
-        printf( "\n*********************\n\t1.登录\n\t2.注册\n\t3.按0退出\n*********************\n" );
-        scanf( "%d",&choose );
-        while( choose > 2 || choose < 0 )
+        printf( "\n*********************\n\ta.登录\n\tb.注册\n\tc.按0退出\n*********************\n" );
+        scanf( "%s",ch );
+        getchar();
+        while( strcmp(ch,"a") != 0 && strcmp( ch,"0" ) != 0 && strcmp( ch,"b" ) != 0 )
         {
             printf( "错误选项，重新选择\n" );
-            scanf( "%d",&choose );
+            scanf( "%s",ch );
         }
-        if( choose == 1 )   //登录
+        if( strcmp(ch,"a") == 0 )   //登录
         {
             n = log_in();
             if( n == 1 )
@@ -286,11 +293,11 @@ int denglu()             //登录界面
                 memset( &guy,0,sizeof(guy) );
         }
 
-        if( choose == 2 ) //注册
+        if( strcmp(ch,"b") == 0 ) //注册
         {
             set_in();
         }
-        if( choose == 0 )
+        if( strcmp( ch,"0" ) == 0 )
         {
             return 0;
         }
@@ -331,6 +338,11 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
             if( guy.login == 3 )  //私聊消息
             {
                 printf( "<私聊消息++>\n" );
+                baocun( &guy );
+            }
+            if( guy.login == 43 )       //群聊消息
+            {
+                printf( "<群消息++>\n" );
                 baocun( &guy );
             }
         }
@@ -420,6 +432,20 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             break;
         }
 
+        if( n == 3 )    //群聊消息
+        {
+            p = head->next;
+            while( p )
+            {
+                if( p->flag == 43 )
+                {
+                    printf( "%s\n",p->buf );
+                }
+                p = p->next;
+            }
+            break;
+        }
+
         if( n == 4 )  //离线消息
         {
             p = head->next;
@@ -429,6 +455,7 @@ void xiaoxi()   //在主线程处理服务器发来的消息
                     printf( "%s\n",p->buf );
                 p = p->next;
             }
+            break;
         }
     }
 }
@@ -464,6 +491,44 @@ void del_friend()     //删除好友
         send( s_fd,(void *)&guy,sizeof(guy),0 );
     }
 }
+void group_chat()       //群聊
+{
+    char n[50];
+    printf( "\n*************************" );
+    printf( "\n\t1.查看加入的群\n\t2.创建群\n\t3.群聊\n\t4.邀请人进群\n" );
+    scanf( "%s",n );
+    while( strcmp(n,"1")!=0 && strcmp(n,"2")!=0 && strcmp(n,"3") != 0 && strcmp(n,"4")!=0 )
+    {
+        printf( "错误选项\n" );
+        scanf( "%s",n );
+    }
 
-//void look_record(  )  //查看聊天记录
+    if( strcmp(n,"1") == 0 )  //查看已加入的群
+    {
+        guy.login = 41; 
+        
+    }
+    if( strcmp(n,"2") == 0 ) //创建群
+    {
+        guy.login = 42;
+    }
+    if( strcmp( n,"3" ) == 0 )      //群聊
+    {
+        guy.login = 43;
+        printf( "选择群账号:" );
+        scanf( "%s",guy.object );
+        getchar();
+        printf( "输入内容:\n" );
+        fgets( guy.buf,4096,stdin );
+
+        send( s_fd,(void *)&guy,sizeof(guy),0);
+    }
+    if( strcmp( n,"4" ) == 0 )  //邀请人进群
+    {
+        guy.login = 44;
+    }
+}
+
+
+//void look_precord(  )  //查看聊天记录
 

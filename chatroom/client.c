@@ -274,15 +274,15 @@ int denglu()             //登录界面
     while(1)
     {
         int n=0;
-        printf( "\n*********************\n\ta.登录\n\tb.注册\n\tc.按0退出\n*********************\n" );
+        printf( "\n*********************\n\t1.登录\n\t2.注册\n\t3.按0退出\n*********************\n" );
         scanf( "%s",ch );
         getchar();
-        while( strcmp(ch,"a") != 0 && strcmp( ch,"0" ) != 0 && strcmp( ch,"b" ) != 0 )
+        while( strcmp(ch,"1") != 0 && strcmp( ch,"2" ) != 0 && strcmp( ch,"0" ) != 0 )
         {
             printf( "错误选项，重新选择\n" );
             scanf( "%s",ch );
         }
-        if( strcmp(ch,"a") == 0 )   //登录
+        if( strcmp(ch,"1") == 0 )   //登录
         {
             n = log_in();
             if( n == 1 )
@@ -293,7 +293,7 @@ int denglu()             //登录界面
                 memset( &guy,0,sizeof(guy) );
         }
 
-        if( strcmp(ch,"b") == 0 ) //注册
+        if( strcmp(ch,"2") == 0 ) //注册
         {
             set_in();
         }
@@ -511,6 +511,11 @@ void group_chat()       //群聊
     if( strcmp(n,"2") == 0 ) //创建群
     {
         guy.login = 42;
+        printf( "输入群账号:\n" );
+        scanf( "%s",guy.buf );
+        getchar();
+
+        send( s_fd,(void *)&guy,sizeof(guy),0 );
     }
     if( strcmp( n,"3" ) == 0 )      //群聊
     {
@@ -526,6 +531,14 @@ void group_chat()       //群聊
     if( strcmp( n,"4" ) == 0 )  //邀请人进群
     {
         guy.login = 44;
+        printf( "邀请进的群账号:\n" );
+        scanf( "%s",guy.buf );
+        getchar();
+        printf( "邀请人的账号:\n" );
+        scanf( "%s",guy.object );
+        getchar();
+
+        send( s_fd,(void *)&guy,sizeof(guy),0 );
     }
 }
 

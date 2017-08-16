@@ -68,12 +68,13 @@ char number[50];  //备份自己账号
 
 
 
+void invite( user *people );
 void take_group();
 void group_chat();
 void save_log( char *number );
 void del_friend( char *number,char *nofri );
 void private_chat();
-void wenjian3( char *number );
+void wenjian3( user *people );
 void wenjian2( char *number );
 void wenjian1( char *number );
 void look_fri();
@@ -201,7 +202,6 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
                 flag = check_login( &people,conn_fd );
                 if( flag == 0 )
                 {
-                    //memset( &people,0,sizeof(people) );
                     send( conn_fd,(void *)&flag,sizeof(flag),0 );
                 }
                 else
@@ -252,15 +252,23 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
             send( conn_fd,(void *)&people,sizeof(people),0 );
         }
 
-        if( people.login == 3 )  //请求私聊
+        if( people.login == 3 )     //请求私聊
         {
             private_chat();
         }
         
-        if( people.login == 43)  //请求群聊
+        if( people.login == 42 )        //请求建群
+        {
+            wenjian3( &people );
+        }
+        if( people.login == 43)         //请求群聊
         {
             take_group();
             group_chat();
+        }
+        if( people.login == 44 )    //邀人进群
+        {
+           invite( &people ); 
         }
 
         if( people.login == 7 ) //请求删除好友
@@ -686,16 +694,18 @@ void wenjian2( char *number )       //该文件存放离线消息
     }
     fclose(fp);
 }
-void wenjian3( char *number )    //该文件存放群成员
+void wenjian3( user *people )    //建文件存放群成员
 {
     char p[50] = {0};
-    strcpy( p,number );
+    strcpy( p,people->buf );
     strcat( p,"group" );
     FILE *fp;
-    if( (fp = fopen(p,"r")) == NULL )
+    if( (fp = fopen(p,"r+")) == NULL )
     {
-        fp = fopen( p,"w+" );
+        fp = fopen( p,"w+");
     }
+    
+    fprintf( fp,"%s\n",people->number );
     fclose(fp);
 }
 
@@ -844,4 +854,21 @@ void group_chat()           //群聊
         private_chat();
         p = p->next;
     }
+}
+
+void invite( user *people )     //邀人进群
+{
+    FILE *fp;
+    char p[50] = {0};
+    strcpy( p,people->buf );
+    strcat( p,"group" );
+
+    fp = fopen( p,"a" );
+    if( fp == NULL )
+    {
+        printf( "无这个群\n" );
+        return ;
+    }
+    fprintf( fp,"%s\n",people->object );
+    fclose(fp);
 }

@@ -27,10 +27,11 @@ typedef struct a{
     int flag;           //标志是登录还是注册
     int login;          //标志各种功能 2为登录成功 其他看menu
     int power;          //权限 能否禁言 踢人
-    char name[50];      //昵称
+    char txt[100];            //文件传输权限
     char number[10];    //账号
     char passwd[20];    //密码
     char object[10];    //聊天对象
+    char pathname[100]; //文件名
     char buf[MAXLEN];   //输入
 }user;
  
@@ -46,7 +47,9 @@ typedef struct b{
 
 int flag;  //判断客户端是否收到了服务器发来的消息
 
-
+void save_wenjian();
+void ask();
+void tp();
 void group_chat();
 void look_precord( );
 void del_friend();
@@ -152,9 +155,45 @@ int main()
                 xiaoxi();
                 break;
             }
+            case 6:     //摇一摇
+            {
+                guy.login = 6;
+                send( s_fd,(void *)&guy,sizeof(guy),0 );
+                break;
+            }
             case 7:        //删除好友
             {
                 del_friend();
+                break;
+            }
+            case 8:         //查看聊天记录
+            {
+                guy.login = 8;
+                send( s_fd,(void *)&guy,sizeof(guy),0 );
+                break;
+            }
+            case 9:         //文件传输
+            {
+                char ch[10];
+                printf( "\n\t1.请求对方\n\t2.发送文件\n\t按零返回\n" );
+                scanf( "%s",ch );
+                while( strcmp(ch,"1")!=0 && strcmp(ch,"2")!=0 && strcmp(ch,"0")!=0 )
+                {
+                    printf( "choose error\n" );
+                    scanf( "%s",ch );
+                } 
+                if( strcmp(ch,"0") == 0 )
+                {
+                    break;
+                }
+                if( strcmp( ch,"1" ) == 0 )
+                {
+                    ask();
+                }
+                if( strcmp(ch,"2") == 0 )
+                {
+                    tp();
+                }
                 break;
             }
         }
@@ -174,11 +213,12 @@ int menu()      //主界面
         printf( "\t\t5.消息管理\n" );
         printf ("\t\t6.摇一摇(附近的人)\n");
         printf( "\t\t7.删除好友\n" );
+        printf( "\t\t8.查看聊天记录\n" );
+        printf( "\t\t9.文件传输\n" );
         printf( "\t\t按0退出聊天室\n" );
         printf( "\t*****************************************\n" );
-        printf("menu===\n");
         scanf( "%d",&n );
-       while( n>7 || n<0 )
+       while( n>9 || n<0 )
        {
            printf( "错误选项，重新选择\n" );
            scanf( "%d",&n );
@@ -314,7 +354,7 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
         {
             if( guy.login == 1 )  //有好友添加信息
             {
-                printf( "\n--->消息+1>  " );
+                printf( "\n--->好友添加消息+1>  " );
                 printf( "%s \n",guy.buf );
                 memset( guy.number,0,sizeof(guy.number) );
                 strcpy( guy.number,number );
@@ -322,7 +362,7 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
             }
             else if( guy.login == 11 )
             {
-                printf( "\n--->消息+1>  " );
+                printf( "\n--->好友添加消息+1>  " );
                 printf( "%s\n",guy.buf );
             }
             if( guy.login == 22 )     //展示好友
@@ -338,12 +378,46 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
             if( guy.login == 3 )  //私聊消息
             {
                 printf( "<私聊消息++>\n" );
+                memset( guy.number,0,sizeof(guy.number) );
+                strcpy( guy.number,number );
                 baocun( &guy );
             }
             if( guy.login == 43 )       //群聊消息
             {
                 printf( "<群消息++>\n" );
+                memset( guy.number,0,sizeof(guy.number) );
                 baocun( &guy );
+                baocun( &guy );
+            }
+            if( guy.login == 6 )    //摇一摇
+            {
+                printf( "%s\n",guy.buf );
+            }
+            if( guy.login == 8 )    //查看聊天记录
+            {
+                printf( "%s\n",guy.buf );
+            }
+            if( guy.login == 9 )    //文件传输的请求
+            {
+                printf( "<请求回复++>\n" );
+                baocun( &guy );
+            }
+            if( guy.login == 99 )   //请求的回复
+            {
+                printf( "对于你想给%s传文件对方回复你%s\n",guy.object,guy.buf );
+                if( strcmp(guy.buf,"yes") == 0 )
+                {
+                    char tmp[100] = {0};
+                    strcpy(tmp,guy.object);
+                    strcat(tmp,guy.buf);
+                    strcpy(guy.txt,tmp);
+                    
+                    baocun(&guy);
+                }
+            }
+            if( guy.login == 999 )  //保存接受的文件
+            {
+                save_wenjian();
             }
         }
     }
@@ -365,26 +439,26 @@ void baocun( user *guy )   //保存服务器发来的信息
 void xiaoxi()   //在主线程处理服务器发来的消息
 {
     int t;
-    int n;
+    char ch[20];
     news *p ;
     while(1)
     {
-        printf("\n********************\n\t1.好友添加\n\t2.私聊\n\t3.群聊\n\t4.离线消息\n\t5.按零退出返回上一级菜单\n");
-        scanf( "%d",&n );
+        printf( "\n********************************" );
+        printf("\n\t1.好友添加\n\t2.私聊\n\t3.群聊\n\t4.离线消息\n\t5.请求回复\n\t按零返回\n");
+        scanf( "%s",ch );
         getchar();
-        while( n>4 || n<0 )
+        while( strcmp(ch,"1")!=0 && strcmp(ch,"2")!=0 && strcmp(ch,"3")!=0 && strcmp(ch,"4")!=0 && strcmp(ch,"0")!=0 && strcmp(ch,"5")!=0 )
         {
             printf( "错误选项\n" );
-            scanf( "%d",&n );
+            scanf( "%s",ch );
             getchar();
         }
         
-        if( n == 0 )   //按零退出
+        if( strcmp(ch,"0") == 0 )   //按零退出
         { 
             break;
         }
-        
-        if( n == 1 )   //处理好友添加的请求
+        if( strcmp(ch,"1") == 0 )   //处理好友添加的请求
         {
             int t;
             p = head->next;
@@ -418,7 +492,7 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             send( s_fd,(void *)&guy,sizeof(user),0 );
         }
         
-        if( n == 2 )        //私聊消息
+        if( strcmp(ch,"2") == 0 )        //私聊消息
         {
             p = head->next;
             while( p )
@@ -432,7 +506,7 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             break;
         }
 
-        if( n == 3 )    //群聊消息
+        if( strcmp(ch,"3") == 0 )    //群聊消息
         {
             p = head->next;
             while( p )
@@ -446,7 +520,7 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             break;
         }
 
-        if( n == 4 )  //离线消息
+        if( strcmp(ch,"4") == 0 )  //离线消息
         {
             p = head->next;
             while( p )
@@ -456,6 +530,24 @@ void xiaoxi()   //在主线程处理服务器发来的消息
                 p = p->next;
             }
             break;
+        }
+        if( strcmp(ch,"5") == 0 )    //文件传输请求回复
+        {
+            guy.login = 99;
+
+            p = head->next;
+            while( p )
+            {
+                if( p->flag == 9 )
+                {
+                    printf( "%s请按'yes' or 'no'\n",p->buf );
+                    memset(guy.buf,0,sizeof(guy.buf));
+                    scanf( "%s",guy.buf );
+                    getchar();
+                    send( s_fd,(void *)&guy,sizeof(guy),0 );
+                }
+                p = p->next;
+            }
         }
     }
 }
@@ -495,19 +587,14 @@ void group_chat()       //群聊
 {
     char n[50];
     printf( "\n*************************" );
-    printf( "\n\t1.查看加入的群\n\t2.创建群\n\t3.群聊\n\t4.邀请人进群\n" );
+    printf( "\n\t1.这里是消息盒子\n\t2.创建群\n\t3.群聊\n\t4.邀请人进群\n" );
     scanf( "%s",n );
-    while( strcmp(n,"1")!=0 && strcmp(n,"2")!=0 && strcmp(n,"3") != 0 && strcmp(n,"4")!=0 )
+    while( strcmp(n,"2")!=0 && strcmp(n,"3") != 0 && strcmp(n,"4")!=0 )
     {
         printf( "错误选项\n" );
         scanf( "%s",n );
     }
 
-    if( strcmp(n,"1") == 0 )  //查看已加入的群
-    {
-        guy.login = 41; 
-        
-    }
     if( strcmp(n,"2") == 0 ) //创建群
     {
         guy.login = 42;
@@ -543,5 +630,73 @@ void group_chat()       //群聊
 }
 
 
-//void look_precord(  )  //查看聊天记录
+void ask()      //向对象发出请求传输文件
+{
+    guy.login = 9;
+    char tmp[100] = {0};
+    printf( "输入想传输文件的账号;\n" );
+    scanf( "%s",guy.object );
+    getchar();
+    
+    strcpy( tmp,guy.number );
+    strcat( tmp,"想给你传一份文件" );
+    strcpy( guy.buf,tmp );
+    
+    send( s_fd,(void *)&guy,sizeof(guy),0 );
 
+}
+
+void tp()       //文件传输
+{
+    char tmp[100] = {0};
+    char pathname[50];
+    FILE *fp;
+
+    printf( "输入想传输文件的账号:\n" );
+    scanf( "%s",guy.object );
+    getchar();
+    strcpy( tmp,guy.object );
+    strcat(tmp,"yes");
+    
+    if( strcmp(tmp,guy.txt) != 0 )
+    {
+        printf( "未取得对方同意\n" );
+        return ;
+    }
+
+    printf( "输入传输的文件名:\n" );
+    scanf( "%s",pathname );
+    getchar();
+    
+    fp = fopen( pathname,"r" );
+    if( fp == NULL )
+    {
+        printf( "找不到该文件\n" );
+        return ;
+    }
+
+    guy.login = 999;
+    strcpy(  guy.pathname,pathname );
+    memset( guy.buf,0,sizeof(guy.buf) );
+
+    while( fscanf( fp,"\n%[^\n]",guy.buf) != EOF )
+    {
+        printf( "发送%s<\n",guy.buf );
+        send( s_fd,(void *)&guy,sizeof(guy),0 );
+        memset( guy.buf,0,sizeof(guy.buf) );
+    }
+    fclose(fp);
+}
+
+void save_wenjian()         //保存接受的文件
+{
+    FILE *fp;
+    strcat(guy.pathname,"...");
+    if( (fp = fopen(guy.pathname,"a")) == NULL )
+    {
+        fp = fopen(guy.pathname,"w");
+    }
+    printf( "接收%s<\n",guy.buf );
+    fprintf( fp,"%s\n",guy.buf );
+    fclose(fp);
+}

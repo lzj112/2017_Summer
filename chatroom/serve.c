@@ -28,10 +28,11 @@ typedef struct b{           //用户各种信息
     int flag;
     int login;
     int power;
-    char name[50];
+    char txt[100];
     char number[10];
     char passwd[20];
     char object[10];
+    char pathname[100];
     char buf[4096];
 }user;
 
@@ -67,13 +68,18 @@ gro *ghead;
 char number[50];  //备份自己账号
 
 
-
+void tp();
+void ask( int conn_fd );
+void take_chatlog( int conn_fd );
+void save_talklog( user *people );
+void shake( int conn_fd );
 void invite( user *people );
 void take_group();
 void group_chat();
 void save_log( char *number );
 void del_friend( char *number,char *nofri );
 void private_chat();
+void wenjian4( user *people );
 void wenjian3( user *people );
 void wenjian2( char *number );
 void wenjian1( char *number );
@@ -271,12 +277,36 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
            invite( &people ); 
         }
 
+        if( people.login == 6 )     //摇一摇
+        {
+            take_friend( people.number );
+            shake( conn_fd );
+        }
+
         if( people.login == 7 ) //请求删除好友
         {
             take_friend( people.number );
             del_friend( people.number,people.buf );
             take_friend( people.number );
             del_friend( people.buf,people.number );
+        }
+
+        if( people.login == 8 )     //请求查看聊天记录
+        {
+            take_chatlog( conn_fd );
+        }
+        
+        if( people.login == 9 )     //请求文件传输
+        {
+            ask(conn_fd);
+        }
+        if( people.login == 99 )    //对于文件传输的回应
+        {
+            ask(conn_fd);
+        }
+        if( people.login == 999 )   //传输文件
+        {
+            tp();
         }
     }
     pthread_exit(0);
@@ -709,6 +739,20 @@ void wenjian3( user *people )    //建文件存放群成员
     fclose(fp);
 }
 
+void wenjian4( user *people )     //创建文件保存聊天记录
+{
+    FILE *fp;
+    char tmp[50] = {0};
+    strcmp( tmp,people->number );
+    strcat( tmp,"chat-log" );
+
+    if( (fp = fopen(tmp,"r+")) == NULL )
+    {
+        fp = fopen( tmp,"w+" );
+    }
+    fclose(fp);
+}
+
 void private_chat()     //私聊
 {
     int ret;
@@ -739,6 +783,8 @@ void private_chat()     //私聊
         off_line( &people,p->number );
         return ;
     }
+    wenjian4( &people );
+    save_talklog( &people );
     send( p->fd,(void *)&people,sizeof(people),0 );  //在线就发送
     
 }
@@ -871,4 +917,132 @@ void invite( user *people )     //邀人进群
     }
     fprintf( fp,"%s\n",people->object );
     fclose(fp);
+}
+
+void shake( int conn_fd )    //摇一摇
+{
+    peo *p = head->next;
+    char tmp[50] = {0};
+    int t = 0;
+    while( p )
+    {
+        t = check_friend( p->number );
+        if( t == 0 && strcmp( p->number,people.number ) != 0 )
+            break;
+        p = p->next;
+    }
+    strcpy( tmp,"为你推荐账号：" );
+    strcat( tmp,p->number );
+    strcpy( people.buf,tmp );
+
+    send( conn_fd,(void *)&people,sizeof(people),0 );
+
+}
+
+void save_talklog( user *people )     //保存聊天记录
+{
+    char tmp[50] = {0};
+    char buf[4096] = {0};
+    FILE *fp;
+    strcpy( tmp,people->number );
+    strcat( tmp,"chat-log" );
+    strcpy( buf,people->buf );
+    fp = fopen( tmp,"a" );
+    if( fp == NULL )
+    {
+        printf( "save_talklog fopen error\n" );
+        return ;
+    }
+    
+    strcat( buf,"   " );
+    strcat( buf,"talks to  " );
+    strcat( buf,people->object );
+    strcat( buf,"\n" );
+    fprintf( fp,"%s",buf );
+
+    fclose(fp);
+
+}
+
+void take_chatlog( int conn_fd )     //查看聊天记录
+{
+    FILE *fp;
+    char tmp[50] = {0};
+    char buf[4096] = {0};
+    strcpy( tmp,people.number );
+    strcat( tmp,"chat-log" );
+
+    fp = fopen( tmp,"r" );
+    if( fp == NULL )
+    {
+        printf( "take_chatlog fopen error\n" );
+        return ;
+    }
+    memset( people.buf,0,sizeof(people.buf) );
+    while( fscanf( fp,"\n%[^\n]",buf ) != EOF)
+    {
+        strcat( people.buf,buf );
+    }
+    send( conn_fd,(void *)&people,sizeof(people),0 );
+    fclose(fp);
+}
+
+
+void ask( int conn_fd )      //请求传输文件
+{
+    int ret;
+    peo *p = head->next;
+
+    printf( "p->fd  %d\n",p->fd );////////////
+
+    ret = check_line( p->number );
+    if( people.login == 9 )
+    {
+        while( p )
+        {
+            if( strcmp( p->number,people.object ) == 0 )
+            {
+                break;
+            }
+            p = p->next;
+        }
+        if( ret == 0 )
+            return ;
+        send( p->fd,(void *)&people,sizeof(people),0 );
+    }
+    if( people.login == 99 )
+    {
+        while( 9 )
+        {
+            if( strcmp( p->number,people.number ) == 0 )
+            {
+                break;
+            }
+            p = p->next;
+        }
+        if( ret == 0 )
+            off_line( &people,p->number );
+        send( p->fd,(void *)&people,sizeof(people),0 );
+    }
+
+}
+
+void tp()       //文件传输
+{
+    peo *p =head->next;
+    while( p )
+    {
+        if( strcmp( p->number,people.object ) == 0 )
+        {
+            break;
+        }
+        p = p->next;
+    }
+    int ret;
+    ret = check_line( p->number );
+    if( ret == 0 )
+    {
+        return ;
+    }
+    send( p->fd,(void *)&people,sizeof(people),0 );
 }

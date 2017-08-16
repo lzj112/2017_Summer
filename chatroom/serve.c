@@ -62,6 +62,7 @@ off *ohead;
 char number[50];  //备份自己账号
 
 
+void save_log( char *number );
 void del_friend( char *number,char *nofri );
 void private_chat();
 void wenjian2( char *number );
@@ -147,6 +148,8 @@ int main()
         }
         
         printf( "有客户端连接\n" );
+        char *log = "有客户端连接";
+        save_log( log );
         
        
         //开辟辅线程处理
@@ -171,11 +174,13 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
         if( (ret = recv( conn_fd,(void *)&people,sizeof(user),0 )) <= 0 )    //接受信息
     	{
             if( errno == EINTR )
-            	printf( "接收信号返回　仍然正常\n" );
+            {
+                printf( "接收信号返回　仍然正常\n" );
+            }
             else
             {
                 xiaxian(conn_fd);
-                pthread_exit(0);
+                pthread_exit( NULL );
             }
         }
         if( people.login == 2 )   //请求登录注册
@@ -185,11 +190,13 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
                 flag = check_login( &people,conn_fd );
                 if( flag == 0 )
                 {
-                    memset( &people,0,sizeof(people) );
+                    //memset( &people,0,sizeof(people) );
+                    send( conn_fd,(void *)&flag,sizeof(flag),0 );
                 }
-                else 
+                else
                 {
                     send( conn_fd,(void *)&flag,sizeof(flag),0 );
+
                     take_offline( people.number );   //检查离线消息
                     if( ohead->next != NULL )
                     {
@@ -362,6 +369,8 @@ int check_login( user *people,int conn_fd )       //登录
         return 0;
     }
     printf( "成功登录\n" );
+    char *tmp = "成功登陆";
+    save_log(tmp);
     
     wenjian1( p->number );   
     wenjian2( p->number );
@@ -386,6 +395,7 @@ void  xiaxian( int conn_fd )         //若有用户下线　链表里的fd置为
     }
     p->fd = -1;
     p->flag = 0;
+    return ;
 }
 
 int check_line( char *number )     //检查对方是否离线
@@ -733,4 +743,28 @@ void del_friend( char *number,char *nofri )     //删除好友
         p3 = p3->next;
     }
 
+}
+
+void save_log( char *number )    //日志文件
+{
+    FILE *fp;
+    fp = fopen( "log","a" );
+    if( fp == NULL )
+    {
+        printf( "log fopen error \n" );
+    }
+    char *s;
+    char tmp[500];
+    timep = malloc( sizeof(timep) );
+    time( timep );
+    s = ctime(timep);
+    memset(tmp,0,sizeof(tmp));
+
+    strcat( tmp,s );  
+    strcat( tmp,"=====>" );
+    strcat( tmp,number );
+    
+    fprintf( fp,"%s\n",tmp );
+    fclose(fp);
+    return ;
 }

@@ -280,7 +280,6 @@ int denglu()             //登录界面
             n = log_in();
             if( n == 1 )
             {
-                //guy.login = 2;
                 break;
             }
             else

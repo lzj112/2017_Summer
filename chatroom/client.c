@@ -15,6 +15,7 @@
 #include<pthread.h>
 #include<arpa/inet.h>
 #include<signal.h>
+#include<signal.h>
 
 #define MAXLEN 4096     //聊天最长输入
 #define PORT 4507
@@ -44,9 +45,12 @@ typedef struct b{
     struct b *next;
 }news;
 
-
+int chatting;
+int chat_flag = 1;
 int flag;  //判断客户端是否收到了服务器发来的消息
 
+
+void s();
 void save_wenjian();
 void ask();
 void tp();
@@ -387,17 +391,34 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
             }
             if( guy.login == 3 )  //私聊消息
             {
-                printf( "<私聊消息++>\n" );
                 memset( guy.number,0,sizeof(guy.number) );
                 strcpy( guy.number,number );
-                baocun( &guy );
+
+                if( chatting == 0 )
+                {
+                    printf( "<私聊消息++>\n" );
+                    baocun( &guy );
+                }
+                if( chatting == 1 )     //如果在聊天就打印在屏幕上
+                {
+                    printf( "%s\n",guy.buf );
+                    printf( "输入内容:\n" );
+                }
             }
             if( guy.login == 43 )       //群聊消息
             {
-                printf( "<群消息++>\n" );
                 memset( guy.number,0,sizeof(guy.number) );
-                baocun( &guy );
-                baocun( &guy );
+                strcpy( guy.number,number );
+                if( chatting == 1 )     //正在聊天 就答应在屏幕上
+                {
+                    printf( "%s\n",guy.buf );
+                    printf( "输入内容:\n" );
+                }
+                else
+                {
+                    printf( "<群消息++>\n" );
+                    baocun(&guy);
+                }
             }
             if( guy.login == 6 )    //摇一摇
             {
@@ -574,16 +595,27 @@ void xiaoxi()   //在主线程处理服务器发来的消息
     }
 }
 
+
 void person_chat()  //私聊
 {
     guy.login = 3;
-    printf( "\n********************************\n\tu are talkinggggg~\n" );
+    chatting = 1;
+    
+    char object[10] = {0};
+    printf( "\n********************************\n\tu are talkinggggg~(q退出)\n" );
     printf( "选择聊天对象的账号:\n" );
     scanf( "%s",guy.object );
     getchar();
-    printf( "输入内容:" );
-    fgets( guy.buf,MAXLEN,stdin );
-    send( s_fd,(void *)&guy,sizeof(user),0 );
+    strcpy( object,guy.object );
+
+    while( strcmp(guy.buf,"q") != 0 )
+    {
+        printf( "输入内容:\n" );
+        fgets( guy.buf,MAXLEN,stdin );
+        strcpy( guy.object,object );
+        send( s_fd,(void *)&guy,sizeof(user),0 );        
+    }
+    chatting = 0;
 }
 
 void del_friend()     //删除好友
@@ -607,6 +639,7 @@ void del_friend()     //删除好友
 }
 void group_chat()       //群聊
 {
+    char object[10];
     char n[50];
     printf( "\n*************************" );
     printf( "\n\t0.这里是消息盒子\n\t1.0返回\n\t2.创建群\n\t3.群聊\n\t4.邀请人进群\n" );
@@ -635,10 +668,18 @@ void group_chat()       //群聊
         printf( "选择群账号:" );
         scanf( "%s",guy.object );
         getchar();
-        printf( "输入内容:\n" );
-        fgets( guy.buf,4096,stdin );
+        strcpy(object,guy.object);
 
-        send( s_fd,(void *)&guy,sizeof(guy),0);
+        while( strcmp(guy.buf,"q") != 0 )
+        {
+            chatting = 1;
+            printf( "输入内容:\n" );
+            fgets( guy.buf,4096,stdin );
+            strcpy( guy.object,object );
+
+            send( s_fd,(void *)&guy,sizeof(guy),0);
+        }
+        chatting = 0;
     }
     if( strcmp( n,"4" ) == 0 )  //邀请人进群
     {

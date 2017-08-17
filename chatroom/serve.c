@@ -68,6 +68,8 @@ gro *ghead;
 char number[50];  //备份自己账号
 
 
+void online_remind( char *number );
+void outline_remind( char *number );
 void tp();
 void ask( int conn_fd );
 void take_chatlog( int conn_fd );
@@ -103,6 +105,7 @@ void *menu();
 int main()
 {
     signal( SIGPIPE,SIG_IGN );
+    //signal( SIGINT, )
     pthread_t tid;
     struct sockaddr_in cin,sin;
     socklen_t sin_len;
@@ -427,13 +430,13 @@ int check_login( user *people,int conn_fd )       //登录
     char *tmp = "成功登陆";
     save_log(tmp);
     
-    wenjian1( p->number );   
+    wenjian1( p->number );          //各种需要的文件
     wenjian2( p->number );
-    
+    online_remind( p->number );     //上线提醒
+
     p->flag = 1;   //登陆成功即在线
-   
     p->fd = conn_fd;  //保存套接字
-   
+
     return 1;
 }
 
@@ -457,6 +460,9 @@ void  xiaxian( int conn_fd )         //若有用户下线　链表里的fd置为
     }  
     p->fd = 0;
     p->flag = 0;
+
+    outline_remind( p->number );        //下线提醒
+
     return ;
 }
 
@@ -791,8 +797,10 @@ void private_chat()     //私聊
         off_line( &people,p->number );
         return ;
     }
+
     wenjian4( &people );
     save_talklog( &people );
+
     send( p->fd,(void *)&people,sizeof(people),0 );  //在线就发送
     
 }
@@ -1052,4 +1060,78 @@ void tp()       //文件传输
         return ;
     }
     send( p->fd,(void *)&people,sizeof(people),0 );
+}
+
+void online_remind( char *number )      //发送好友上线提醒
+{
+    int ret;
+    char tmp[100] = {0};
+    people.login = 123;
+    take_friend( number );
+    fri *p = phead->next;
+    peo *p1;
+
+    strcpy( tmp,"你的好友" );
+    strcat( tmp,number );
+    strcat( tmp,"已经上线" );
+    strcpy( people.buf,tmp );
+    while( p )
+    {
+        p1 = head->next;
+
+        ret = check_line( p->number );      //如果对方不在线不发送
+        if( ret == 0 )
+        {
+            p = p->next;
+            continue;
+        }
+       while( p1 )
+        {
+            if( strcmp(p->number,p1->number) == 0 )
+            {
+                break;
+            }
+            p1 = p1->next;
+        }
+        send( p1->fd,(void *)&people,sizeof(people),0 );
+        
+        p = p->next;
+    }
+}
+
+void outline_remind( char *number )     //发送好友下线提    //发送好友下线提醒
+{
+    int ret;
+    peo *p1;
+    char tmp[100] = {0};
+    people.login = 456;
+    take_friend( number );
+    fri *p = phead->next;
+
+    strcpy( tmp,"你的好友" );
+    strcat( tmp,number );
+    strcat( tmp,"已经下线" );
+    strcpy( people.buf,tmp );
+
+    while( p )
+    {
+        p1 = head->next;
+        ret = check_line( p->number );
+        if( ret == 0 )
+        {
+            p = p->next;
+            continue;
+        }
+        while( p1 )
+        {
+            if( strcmp(p1->number,p->number) == 0 )
+            {
+                break;
+            }
+            p1 = p1->next;
+        }
+        send( p1->fd,(void *)&people,sizeof(people),0 );
+        
+        p = p->next;
+    }
 }

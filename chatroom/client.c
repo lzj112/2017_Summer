@@ -106,7 +106,6 @@ int main()
 
     strcpy( number,guy.number );
 
-
     if( ret == 0 )
     {
         return 0;
@@ -450,6 +449,11 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
             {
                 save_wenjian();
             }
+            
+            if( guy.login == 123 || guy.login == 456 )      //上下线提醒
+            {
+                printf( "----->%s\n",guy.buf );
+            }
         }
     }
 }
@@ -595,27 +599,42 @@ void xiaoxi()   //在主线程处理服务器发来的消息
     }
 }
 
+void s( int sig )
+{
+    chat_flag = 0;
+    //printf( "===%d===\n",sig );
+}
 
 void person_chat()  //私聊
 {
     guy.login = 3;
     chatting = 1;
+    chat_flag = 1;
     
     char object[10] = {0};
-    printf( "\n********************************\n\tu are talkinggggg~(q退出)\n" );
+    printf( "\n********************************\n\tu are talkinggggg~(ctrl+c+Enter退出)\n" );
     printf( "选择聊天对象的账号:\n" );
     scanf( "%s",guy.object );
     getchar();
     strcpy( object,guy.object );
 
-    while( strcmp(guy.buf,"q") != 0 )
+    while( chat_flag )
     {
+        signal( SIGINT,s );
+        if( chat_flag == 0 )
+        {
+        printf( "flag===%d\n",chat_flag );
+            break;
+        }
         printf( "输入内容:\n" );
         fgets( guy.buf,MAXLEN,stdin );
+        printf( "--------%s---------\n",guy.buf );
         strcpy( guy.object,object );
         send( s_fd,(void *)&guy,sizeof(user),0 );        
     }
     chatting = 0;
+    chat_flag = 1;
+    signal( SIGINT,SIG_DFL );
 }
 
 void del_friend()     //删除好友
@@ -669,9 +688,15 @@ void group_chat()       //群聊
         scanf( "%s",guy.object );
         getchar();
         strcpy(object,guy.object);
-
-        while( strcmp(guy.buf,"q") != 0 )
+        printf( "\n*********************************************\n" );
+        printf( "\t\t\t群聊(ctrl+c+Enter退出)\n" );
+        while( chat_flag )
         {
+            signal( SIGINT,s );
+            if( chat_flag == 0 )
+            {
+                break;
+            }
             chatting = 1;
             printf( "输入内容:\n" );
             fgets( guy.buf,4096,stdin );
@@ -680,6 +705,7 @@ void group_chat()       //群聊
             send( s_fd,(void *)&guy,sizeof(guy),0);
         }
         chatting = 0;
+        chat_flag = 1;
     }
     if( strcmp( n,"4" ) == 0 )  //邀请人进群
     {

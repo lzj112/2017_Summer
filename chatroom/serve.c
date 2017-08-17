@@ -197,7 +197,7 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
             }
             else
             {
-                xiaxian(conn_fd);
+                xiaxian( conn_fd );
                 pthread_exit( NULL );
             }
         }
@@ -418,7 +418,7 @@ int check_login( user *people,int conn_fd )       //登录
         printf( "密码不正确\n" );
         return 0;
     }
-
+    
     if( p->flag == 1 )
     {
         return 0;
@@ -440,15 +440,22 @@ int check_login( user *people,int conn_fd )       //登录
 void  xiaxian( int conn_fd )         //若有用户下线　链表里的fd置为-1
 {
     peo *p = head->next;
+    int t = 0;
     while( p )
     {
         if( p->fd == conn_fd )
         {
+            t = 1;
             break;
         }
         p = p->next;
     }
-    p->fd = -1;
+    if( t == 0 )
+    {
+        printf( "daozhelile\n" );
+        return ;
+    }  
+    p->fd = 0;
     p->flag = 0;
     return ;
 }
@@ -562,7 +569,7 @@ void tianjia( user *people,int conn_fd )      //添加好友
             off_line( people,p->number );
             return ;
         }
-    
+        
         if( send( p->fd,people,sizeof(user),0 ) < 0) //给想添加的账号发送请求
         {
             printf( "niang类 原来是这里错了\n" );
@@ -692,6 +699,7 @@ void take_offline( char *number )           //从文件读取离线信息到链�
 void look_fri()         //把好友信息放到buf里
 {
     fri *p = phead->next;
+    printf( "\n" );
     memset( people.buf,0,sizeof(people.buf) );
     while( p )
     {
@@ -993,7 +1001,6 @@ void ask( int conn_fd )      //请求传输文件
     int ret;
     peo *p = head->next;
 
-    printf( "p->fd  %d\n",p->fd );////////////
 
     ret = check_line( p->number );
     if( people.login == 9 )

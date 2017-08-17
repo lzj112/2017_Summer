@@ -119,6 +119,8 @@ int main()
                 break;
             case 1: //添加好友
             {
+                memset( guy.number,0,sizeof(guy.number) );
+                strcpy(guy.number,number);
                 printf( "\n请输入添加账号：" );
                 scanf( "%s",guy.buf );       //输入要添加的账号
                 if( strcmp(guy.buf,guy.number) == 0 )
@@ -137,6 +139,8 @@ int main()
             case 2:         //好友列表
             {
                 guy.login = 22;
+                memset(guy.number,0,sizeof(guy.number));
+                strcpy(guy.number,number);
                 send( s_fd,(void *)&guy,sizeof(guy),0 );
                 break;
             }
@@ -197,13 +201,16 @@ int main()
                 break;
             }
         }
+       // memset( guy.number,0,sizeof(guy.number) );
+        //strcpy(guy.number,number);
     }
     return 0;
 }
 
 int menu()      //主界面
 {
-    int n;
+    int ch;
+    char n[100];
 
         printf( "\n\t*****************************************\n" );
         printf( "\t\t1.添加好友\n" );
@@ -217,13 +224,16 @@ int menu()      //主界面
         printf( "\t\t9.文件传输\n" );
         printf( "\t\t按0退出聊天室\n" );
         printf( "\t*****************************************\n" );
-        scanf( "%d",&n );
-       while( n>9 || n<0 )
+
+        scanf( "%s",n );
+        //choose = atoi(n);
+       while(strcmp(n,"1")!=0&&strcmp(n,"2")!=0&&strcmp(n,"3")!=0&&strcmp(n,"4")!=0&&strcmp(n,"5")!=0&&strcmp(n,"6")!=0&&strcmp(n,"7")!=0&&strcmp(n,"8")!=0&&strcmp(n,"9")!=0&&strcmp(n,"0")!=0)
        {
            printf( "错误选项，重新选择\n" );
-           scanf( "%d",&n );
+           scanf( "%s",n );
        }
-       return n;
+        ch = atoi(n);
+   return ch;
 }
 
 int log_in()   //登录
@@ -352,17 +362,17 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
     {
         if( (ret = recv( s_fd,(void *)&guy,sizeof(user),0 )) >0  )
         {
+            printf( "\n" );
             if( guy.login == 1 )  //有好友添加信息
             {
-                printf( "\n--->好友添加消息+1>  " );
-                printf( "%s \n",guy.buf );
+                printf( "\n--->好友添加消息+1>\n" );
                 memset( guy.number,0,sizeof(guy.number) );
                 strcpy( guy.number,number );
                 baocun( &guy );
             }
             else if( guy.login == 11 )
             {
-                printf( "\n--->好友添加消息+1>  " );
+                printf( "\n--->好友添加消息+1>\n" );
                 printf( "%s\n",guy.buf );
             }
             if( guy.login == 22 )     //展示好友
@@ -425,7 +435,6 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
 
 void baocun( user *guy )   //保存服务器发来的信息
 {
-    //printf( "%d %s\n",guy->login,guy->buf );
     p1 = (news *)malloc( sizeof(news) );
     p2->next = p1;
     p1->flag = guy->login;
@@ -439,28 +448,29 @@ void baocun( user *guy )   //保存服务器发来的信息
 void xiaoxi()   //在主线程处理服务器发来的消息
 {
     int t;
-    char ch[20];
+    char c[20];
     news *p ;
     while(1)
     {
         printf( "\n********************************" );
         printf("\n\t1.好友添加\n\t2.私聊\n\t3.群聊\n\t4.离线消息\n\t5.请求回复\n\t按零返回\n");
-        scanf( "%s",ch );
+        scanf( "%s",c );
         getchar();
-        while( strcmp(ch,"1")!=0 && strcmp(ch,"2")!=0 && strcmp(ch,"3")!=0 && strcmp(ch,"4")!=0 && strcmp(ch,"0")!=0 && strcmp(ch,"5")!=0 )
+        while( strcmp(c,"1")!=0 && strcmp(c,"2")!=0 && strcmp(c,"3")!=0 && strcmp(c,"4")!=0 && strcmp(c,"0")!=0 && strcmp(c,"5")!=0 )
         {
             printf( "错误选项\n" );
-            scanf( "%s",ch );
+            scanf( "%s",c );
             getchar();
         }
         
-        if( strcmp(ch,"0") == 0 )   //按零退出
+        if( strcmp(c,"0") == 0 )   //按零退出
         { 
             break;
         }
-        if( strcmp(ch,"1") == 0 )   //处理好友添加的请求
+        if( strcmp(c,"1") == 0 )   //处理好友添加的请求
         {
-            int t;
+            int t,flag=0;
+            char ch[50];
             p = head->next;
             while( p)
             {
@@ -470,8 +480,14 @@ void xiaoxi()   //在主线程处理服务器发来的消息
                 }
                 p = p->next;
             }
+          /*  if( strcmp(p->buf,"number error") == 0)
+            {
+                return ;
+            }*/
             printf( "请输入对应编号处理:(或按零返回上层页面)\n" );
-            scanf( "%d",&t );
+            scanf( "%s",ch );
+            getchar();
+            t = atoi(ch);
             if( t == 0 )
             {
                 return ;
@@ -481,9 +497,15 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             {
                 if( p->fd == t )
                 {
+                    flag = 1;
                     break;
                 }
                 p = p->next;
+            }
+            if( flag == 0 )
+            {
+                printf( "无\n" );
+                return ;
             }
             printf( "\n%s please input 'y' or 'n'\n",p->buf );
             memset(guy.buf,0,sizeof(guy.buf));
@@ -492,7 +514,7 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             send( s_fd,(void *)&guy,sizeof(user),0 );
         }
         
-        if( strcmp(ch,"2") == 0 )        //私聊消息
+        if( strcmp(c,"2") == 0 )        //私聊消息
         {
             p = head->next;
             while( p )
@@ -506,7 +528,7 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             break;
         }
 
-        if( strcmp(ch,"3") == 0 )    //群聊消息
+        if( strcmp(c,"3") == 0 )    //群聊消息
         {
             p = head->next;
             while( p )
@@ -520,7 +542,7 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             break;
         }
 
-        if( strcmp(ch,"4") == 0 )  //离线消息
+        if( strcmp(c,"4") == 0 )  //离线消息
         {
             p = head->next;
             while( p )
@@ -531,7 +553,7 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             }
             break;
         }
-        if( strcmp(ch,"5") == 0 )    //文件传输请求回复
+        if( strcmp(c,"5") == 0 )    //文件传输请求回复
         {
             guy.login = 99;
 
@@ -587,14 +609,17 @@ void group_chat()       //群聊
 {
     char n[50];
     printf( "\n*************************" );
-    printf( "\n\t1.这里是消息盒子\n\t2.创建群\n\t3.群聊\n\t4.邀请人进群\n" );
+    printf( "\n\t0.这里是消息盒子\n\t1.0返回\n\t2.创建群\n\t3.群聊\n\t4.邀请人进群\n" );
     scanf( "%s",n );
-    while( strcmp(n,"2")!=0 && strcmp(n,"3") != 0 && strcmp(n,"4")!=0 )
+    while( strcmp(n,"2")!=0 && strcmp(n,"3") != 0 && strcmp(n,"4")!=0&&strcmp(n,"0")!=0 )
     {
         printf( "错误选项\n" );
         scanf( "%s",n );
     }
-
+    if( strcmp(n,"0") == 0 )
+    {
+        return ;
+    }
     if( strcmp(n,"2") == 0 ) //创建群
     {
         guy.login = 42;
@@ -681,7 +706,6 @@ void tp()       //文件传输
 
     while( fscanf( fp,"\n%[^\n]",guy.buf) != EOF )
     {
-        printf( "发送%s<\n",guy.buf );
         send( s_fd,(void *)&guy,sizeof(guy),0 );
         memset( guy.buf,0,sizeof(guy.buf) );
     }
@@ -696,7 +720,6 @@ void save_wenjian()         //保存接受的文件
     {
         fp = fopen(guy.pathname,"w");
     }
-    printf( "接收%s<\n",guy.buf );
     fprintf( fp,"%s\n",guy.buf );
     fclose(fp);
 }

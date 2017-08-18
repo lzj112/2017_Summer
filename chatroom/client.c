@@ -18,8 +18,7 @@
 #include<signal.h>
 
 #define MAXLEN 4096     //聊天最长输入
-#define PORT 9999
-//#define PORT 4507
+#define PORT 4507
 #define IP "127.0.0.1"
         
 
@@ -245,13 +244,15 @@ int log_in()   //登录
     int flag;
     guy.flag = 1;
     guy.login = 2;
+    char *tmp;
 
-    printf( "\t\n请输入账号：\n" );
+    printf( "请输入账号：\n" );
     scanf( "%s",guy.number );
-    printf( "\t\n请输入密码：\n" );
-    scanf( "%s",guy.passwd );
-    
-    printf( "%s %s\n",guy.number,guy.passwd);
+    /*printf( "\t\n请输入密码：\n" );
+    scanf( "%s",guy.passwd );*/
+    tmp = getpass( "请输入密码:\n" );
+    strcpy( guy.passwd,tmp );    
+
     if( send(s_fd,(void *)&guy,sizeof(user),0) < 0 )         //发送
     {
         printf( "client send error\n" );

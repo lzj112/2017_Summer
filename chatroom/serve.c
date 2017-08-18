@@ -68,6 +68,7 @@ gro *ghead;
 char number[50];  //备份自己账号
 
 
+void member_group( int conn_fd );
 void online_remind( char *number );
 void outline_remind( char *number );
 void tp();
@@ -170,7 +171,7 @@ int main()
         
         printf( "有客户端连接\n" );
         char *log = "有客户端连接";
-        save_log( log );
+       // save_log( log );
         
        
         //开辟辅线程处理
@@ -275,6 +276,21 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
             take_group();
             group_chat();
         }
+        
+        if( people.login == 45 )        //请求查看群成员
+        {
+            take_group();
+            member_group( conn_fd );
+        }
+
+        if( people.login == 46 )        //请求解散群
+        {
+            char tmp[50] = {0};
+            strcpy( tmp,people.object );
+            strcat( tmp,"group" );
+           remove( tmp );
+        }
+
         if( people.login == 44 )    //邀人进群
         {
            invite( &people ); 
@@ -866,7 +882,7 @@ void save_log( char *number )    //日志文件
     return ;
 }
 
-void take_group()   //取出群成员
+void take_group()   //取出群成员存到链表
 {
     FILE *fp;
     char p[50] = {0};
@@ -884,6 +900,7 @@ void take_group()   //取出群成员
     if( fp == NULL )
     {
         printf ("group_chat fopen error \n");
+        return ;
     }
     while( fscanf( fp,"%s",p1->number ) != EOF )
     {
@@ -1135,3 +1152,16 @@ void outline_remind( char *number )     //发送好友下线提    //发送好�
         p = p->next;
     }
 }
+
+void member_group( int conn_fd )         //展示群成员
+{
+    gro *p = ghead->next;
+    while( p )
+    {
+        memset(people.buf,0,sizeof(people.buf));
+        strcpy( people.buf,p->number );
+        send( conn_fd,(void *)&people,sizeof(people),0 );
+        p = p->next;
+    }
+}
+

@@ -18,7 +18,8 @@
 #include<signal.h>
 
 #define MAXLEN 4096     //聊天最长输入
-#define PORT 4507
+#define PORT 9999
+//#define PORT 4507
 #define IP "127.0.0.1"
         
 
@@ -410,7 +411,7 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
                 strcpy( guy.number,number );
                 if( chatting == 1 )     //正在聊天 就答应在屏幕上
                 {
-                    printf( "%s\n",guy.buf );
+                    printf( "%s(%s)\n",guy.buf,guy.object );
                     printf( "输入内容:\n" );
                 }
                 else
@@ -419,6 +420,12 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
                     baocun(&guy);
                 }
             }
+            
+            if( guy.login == 45 )       //展示群成员
+            {
+                printf( "(%s):%s\n",guy.object,guy.buf );
+            }
+
             if( guy.login == 6 )    //摇一摇
             {
                 printf( "%s\n",guy.buf );
@@ -602,7 +609,6 @@ void xiaoxi()   //在主线程处理服务器发来的消息
 void s( int sig )
 {
     chat_flag = 0;
-    //printf( "===%d===\n",sig );
 }
 
 void person_chat()  //私聊
@@ -628,7 +634,6 @@ void person_chat()  //私聊
         }
         printf( "输入内容:\n" );
         fgets( guy.buf,MAXLEN,stdin );
-        printf( "--------%s---------\n",guy.buf );
         strcpy( guy.object,object );
         send( s_fd,(void *)&guy,sizeof(user),0 );        
     }
@@ -661,9 +666,9 @@ void group_chat()       //群聊
     char object[10];
     char n[50];
     printf( "\n*************************" );
-    printf( "\n\t0.这里是消息盒子\n\t1.0返回\n\t2.创建群\n\t3.群聊\n\t4.邀请人进群\n" );
+    printf( "\n\t0.这里是消息盒子\n\t1.0返回\n\t2.创建群\n\t3.群聊\n\t4.邀请人进群\n\t5.查看群成员\n\t6.解散群\n" );
     scanf( "%s",n );
-    while( strcmp(n,"2")!=0 && strcmp(n,"3") != 0 && strcmp(n,"4")!=0&&strcmp(n,"0")!=0 )
+    while( strcmp(n,"2")!=0 && strcmp(n,"3") != 0 && strcmp(n,"4")!=0&&strcmp(n,"0")!=0&&strcmp(n,"5")!=0&&strcmp(n,"6")!=0 )
     {
         printf( "错误选项\n" );
         scanf( "%s",n );
@@ -678,7 +683,7 @@ void group_chat()       //群聊
         printf( "输入群账号:\n" );
         scanf( "%s",guy.buf );
         getchar();
-
+        guy.power = 1;
         send( s_fd,(void *)&guy,sizeof(guy),0 );
     }
     if( strcmp( n,"3" ) == 0 )      //群聊
@@ -718,6 +723,28 @@ void group_chat()       //群聊
         getchar();
 
         send( s_fd,(void *)&guy,sizeof(guy),0 );
+    }
+    if( strcmp(n,"5") == 0 )    //查看群成员
+    {
+        guy.login = 45;
+        printf( "请输入群账号:\n" );
+        scanf( "%s",guy.object );
+        send( s_fd,(void *)&guy,sizeof(guy),0 );
+    }
+    if( strcmp(n,"6") == 0 )    //解散群
+    {
+        guy.login = 46;
+       // if( guy.power == 1 )
+        //{
+            printf( "输入解散的群号:\n" );
+            scanf( "%s",guy.object );
+            send( s_fd,(void *)&guy,sizeof(guy),0 );
+        /*}
+        else
+        {
+            printf( "只有群主才能这么做\n" );
+            return ;
+        }*/
     }
 }
 

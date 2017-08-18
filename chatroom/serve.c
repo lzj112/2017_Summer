@@ -252,6 +252,7 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
 
         if( people.login == 1 || people.login == 11 )         //请求添加好友
         {
+
             tianjia(&people,conn_fd);
         }
         
@@ -317,6 +318,7 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
         
         if( people.login == 9 )     //请求文件传输
         {
+            printf( "aaaaa\n" );
             ask(conn_fd);
         }
         if( people.login == 99 )    //对于文件传输的回应
@@ -471,7 +473,6 @@ void  xiaxian( int conn_fd )         //若有用户下线　链表里的fd置为
     }
     if( t == 0 )
     {
-        printf( "daozhelile\n" );
         return ;
     }  
     p->fd = 0;
@@ -539,6 +540,15 @@ void  reply( user *people )     //对于添加好友的回复
 
 void tianjia( user *people,int conn_fd )      //添加好友
 {
+    
+    take_friend( people->number );
+    
+    fri *pp = phead->next;///////////////////////
+    while( pp )
+    {
+        printf( "%s 的friend==============%s\n",people->number,pp->number );
+        pp = pp->next;
+    }//////////////////////////////
 
     if( people->login == 11 )
     {
@@ -549,7 +559,7 @@ void tianjia( user *people,int conn_fd )      //添加好友
     peo *p = head->next;
     while( p )        //找该账号
     {
-        if( strcmp( p->number,people->buf ) == 0 )          
+        if( strcmp( p->number,people->object ) == 0 )          
         {
             t = 1;
             break;
@@ -559,18 +569,22 @@ void tianjia( user *people,int conn_fd )      //添加好友
     if( t == 0 )
     {
         memset( people->buf,0,sizeof(people->buf) );   
-        strcpy( people->buf,"number error" ); 
+        strcpy( people->buf,"number error" );
+        people->login = 111;
+
         send( conn_fd,(void *)people,sizeof(user),0 );
         return ;
     }
     else 
     {
         int ret;
-        ret = check_friend( p->number );  //检查是否已经添加对方为好友
+        ret = check_friend( people->object );  //检查是否已经添加对方为好友
         if( ret == 1 )
         {
             memset( people->buf,0,sizeof(people->buf) );
             strcpy( people->buf,"对方已经是你的好友" );
+            people->login = 111;
+
             send( conn_fd,(void *)people,sizeof(user),0 );
             return ;
         }
@@ -587,7 +601,6 @@ void tianjia( user *people,int conn_fd )      //添加好友
         }
         if( ret == 0 )    //离线，把消息存起来
         {
-
             off_line( people,p->number );
             return ;
         }
@@ -649,8 +662,10 @@ void  take_friend( char *p )         //从文件读取每个人的好友
 int check_friend( char *number )          //检查是否已经添加对方为好友
 {
     fri *p = phead->next;
+    printf( "number==%s\n",number );///////////
     while( p )
     {
+        printf( "friend==%s\n",p->number );/////////////
         if( strcmp( p->number,number ) == 0 )
         {
             return 1;
@@ -666,7 +681,7 @@ void off_line( user *people,char *number )     //保存该用户离线消息到�
     strcpy( p,number );
     strcat( p,"off-line" );
     FILE *fp;
-    fp = fopen( p,"w" );
+    fp = fopen( p,"a" );
     if( fp == NULL )
     {
         printf( "off_line fopen error\n" );
@@ -895,7 +910,7 @@ void take_group()   //取出群成员存到链表
 
     strcpy( p,people.object );
     strcat( p,"group" );
-    
+
     fp = fopen( p,"r" );
     if( fp == NULL )
     {
@@ -1023,6 +1038,7 @@ void take_chatlog( int conn_fd )     //查看聊天记录
 
 void ask( int conn_fd )      //请求传输文件
 {
+    printf( "进来了\n" );
     int ret;
     peo *p = head->next;
 
@@ -1038,23 +1054,26 @@ void ask( int conn_fd )      //请求传输文件
             }
             p = p->next;
         }
+    people.fd = conn_fd; 
+        printf( "发过去p->fd%d people->f%d  %s\n",p->fd,people.fd,people.buf );/////////
         if( ret == 0 )
             return ;
         send( p->fd,(void *)&people,sizeof(people),0 );
     }
     if( people.login == 99 )
     {
-        while( 9 )
+        printf( "发回来%d %s\n",people.fd,people.buf );////////
+       /* while( p )
         {
             if( strcmp( p->number,people.number ) == 0 )
             {
                 break;
             }
             p = p->next;
-        }
+        }*/
         if( ret == 0 )
-            off_line( &people,p->number );
-        send( p->fd,(void *)&people,sizeof(people),0 );
+            return ;
+        send( people.fd,(void *)&people,sizeof(people),0 );
     }
 
 }

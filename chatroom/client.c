@@ -50,6 +50,7 @@ int chat_flag = 1;
 int flag;  //判断客户端是否收到了服务器发来的消息
 
 
+void delxiaoxi();
 void s();
 void save_wenjian();
 void ask();
@@ -115,18 +116,17 @@ int main()
 
     while( choose = menu() )    //主界面，各种功能
     {
-        
+        memset( guy.number,0,sizeof(guy.number) );
+        strcpy( guy.number,number );
         switch(choose)
         {
             case 0:
                 break;
             case 1: //添加好友
             {
-                memset( guy.number,0,sizeof(guy.number) );
-                strcpy(guy.number,number);
                 printf( "\n请输入添加账号：" );
-                scanf( "%s",guy.buf );       //输入要添加的账号
-                if( strcmp(guy.buf,guy.number) == 0 )
+                scanf( "%s",guy.object );       //输入要添加的账号
+                if( strcmp(guy.object,guy.number) == 0 )
                 {
                     printf( "长点心　这是你自己...\n" );
                     break;
@@ -204,8 +204,6 @@ int main()
                 break;
             }
         }
-       // memset( guy.number,0,sizeof(guy.number) );
-        //strcpy(guy.number,number);
     }
     return 0;
 }
@@ -248,8 +246,6 @@ int log_in()   //登录
 
     printf( "请输入账号：\n" );
     scanf( "%s",guy.number );
-    /*printf( "\t\n请输入密码：\n" );
-    scanf( "%s",guy.passwd );*/
     tmp = getpass( "请输入密码:\n" );
     strcpy( guy.passwd,tmp );    
 
@@ -367,17 +363,21 @@ void *request( void *arg )    //接收别的客户端发来的请求 添加好�
     {
         if( (ret = recv( s_fd,(void *)&guy,sizeof(user),0 )) >0  )
         {
+            memset( guy.number,0,sizeof(guy.number) );
+            strcpy(guy.number,number);
             printf( "\n" );
             if( guy.login == 1 )  //有好友添加信息
             {
                 printf( "\n--->好友添加消息+1>\n" );
-                memset( guy.number,0,sizeof(guy.number) );
-                strcpy( guy.number,number );
                 baocun( &guy );
             }
-            else if( guy.login == 11 )
+            if( guy.login == 11 )
             {
                 printf( "\n--->好友添加消息+1>\n" );
+                printf( "%s\n",guy.buf );
+            }
+            if( guy.login == 111 )
+            {
                 printf( "%s\n",guy.buf );
             }
             if( guy.login == 22 )     //展示好友
@@ -486,10 +486,10 @@ void xiaoxi()   //在主线程处理服务器发来的消息
     while(1)
     {
         printf( "\n********************************" );
-        printf("\n\t1.好友添加\n\t2.私聊\n\t3.群聊\n\t4.离线消息\n\t5.请求回复\n\t按零返回\n");
+        printf("\n\t1.好友添加\n\t2.私聊\n\t3.群聊\n\t4.离线消息\n\t5.请求回复\n\t6.清空消息盒子\n\t按零返回\n");
         scanf( "%s",c );
         getchar();
-        while( strcmp(c,"1")!=0 && strcmp(c,"2")!=0 && strcmp(c,"3")!=0 && strcmp(c,"4")!=0 && strcmp(c,"0")!=0 && strcmp(c,"5")!=0 )
+        while( strcmp(c,"1")!=0 && strcmp(c,"2")!=0 && strcmp(c,"3")!=0 && strcmp(c,"4")!=0 && strcmp(c,"0")!=0 && strcmp(c,"5")!=0&&strcmp(c,"6")!=0 )
         {
             printf( "错误选项\n" );
             scanf( "%s",c );
@@ -513,10 +513,6 @@ void xiaoxi()   //在主线程处理服务器发来的消息
                 }
                 p = p->next;
             }
-          /*  if( strcmp(p->buf,"number error") == 0)
-            {
-                return ;
-            }*/
             printf( "请输入对应编号处理:(或按零返回上层页面)\n" );
             scanf( "%s",ch );
             getchar();
@@ -543,6 +539,7 @@ void xiaoxi()   //在主线程处理服务器发来的消息
             printf( "\n%s please input 'y' or 'n'\n",p->buf );
             memset(guy.buf,0,sizeof(guy.buf));
             scanf( "%s",guy.buf );
+            guy.fd = p->fd; 
             guy.login = 11;
             send( s_fd,(void *)&guy,sizeof(user),0 );
         }
@@ -599,10 +596,15 @@ void xiaoxi()   //在主线程处理服务器发来的消息
                     memset(guy.buf,0,sizeof(guy.buf));
                     scanf( "%s",guy.buf );
                     getchar();
+                    guy.fd = p->fd;
                     send( s_fd,(void *)&guy,sizeof(guy),0 );
                 }
                 p = p->next;
             }
+        }
+        if( strcmp(c,"6") == 0 )
+        {
+            delxiaoxi();
         }
     }
 }
@@ -630,7 +632,6 @@ void person_chat()  //私聊
         signal( SIGINT,s );
         if( chat_flag == 0 )
         {
-        printf( "flag===%d\n",chat_flag );
             break;
         }
         printf( "输入内容:\n" );
@@ -817,4 +818,17 @@ void save_wenjian()         //保存接受的文件
     }
     fprintf( fp,"%s\n",guy.buf );
     fclose(fp);
+}
+
+void delxiaoxi()    //清空消息盒子
+{
+    news *p = head->next;
+    news *pp;
+    while( p )
+    {
+        pp = p->next;
+        free(p);
+        p = pp;
+    }
+    head->next = NULL;
 }

@@ -17,7 +17,7 @@
 #include<signal.h>
 #include<signal.h>
 
-#define MAXLEN 4096     //聊天最长输入
+#define MAXLEN 1000     //聊天最长输入
 #define PORT 4507
 #define IP "127.0.0.1"
         
@@ -789,7 +789,7 @@ void tp()       //文件传输
     scanf( "%s",pathname );
     getchar();
     
-    fp = fopen( pathname,"r" );
+    fp = fopen( pathname,"rb" );
     if( fp == NULL )
     {
         printf( "找不到该文件\n" );
@@ -803,8 +803,10 @@ void tp()       //文件传输
     while( fscanf( fp,"\n%[^\n]",guy.buf) != EOF )
     {
         send( s_fd,(void *)&guy,sizeof(guy),0 );
+        usleep(10000);
         memset( guy.buf,0,sizeof(guy.buf) );
     }
+    printf( "\n" );
     fclose(fp);
 }
 
@@ -812,9 +814,9 @@ void save_wenjian()         //保存接受的文件
 {
     FILE *fp;
     strcat(guy.pathname,"...");
-    if( (fp = fopen(guy.pathname,"a")) == NULL )
+    if( (fp = fopen(guy.pathname,"ab")) == NULL )
     {
-        fp = fopen(guy.pathname,"w");
+        fp = fopen(guy.pathname,"wb");
     }
     fprintf( fp,"%s\n",guy.buf );
     fclose(fp);

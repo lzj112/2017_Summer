@@ -33,7 +33,7 @@ typedef struct b{           //用户各种信息
     char passwd[20];
     char object[10];
     char pathname[100];
-    char buf[4096];
+    char buf[100];
 }user;
 
 typedef struct a{       //每个人的好友
@@ -318,7 +318,6 @@ void *menu( void *arg )        //主要函数，调用子函数，进行各种�
         
         if( people.login == 9 )     //请求文件传输
         {
-            printf( "aaaaa\n" );
             ask(conn_fd);
         }
         if( people.login == 99 )    //对于文件传输的回应
@@ -662,7 +661,6 @@ void  take_friend( char *p )         //从文件读取每个人的好友
 int check_friend( char *number )          //检查是否已经添加对方为好友
 {
     fri *p = phead->next;
-    printf( "number==%s\n",number );///////////
     while( p )
     {
         printf( "friend==%s\n",p->number );/////////////
@@ -1038,7 +1036,6 @@ void take_chatlog( int conn_fd )     //查看聊天记录
 
 void ask( int conn_fd )      //请求传输文件
 {
-    printf( "进来了\n" );
     int ret;
     peo *p = head->next;
 
@@ -1055,22 +1052,12 @@ void ask( int conn_fd )      //请求传输文件
             p = p->next;
         }
     people.fd = conn_fd; 
-        printf( "发过去p->fd%d people->f%d  %s\n",p->fd,people.fd,people.buf );/////////
         if( ret == 0 )
             return ;
         send( p->fd,(void *)&people,sizeof(people),0 );
     }
     if( people.login == 99 )
     {
-        printf( "发回来%d %s\n",people.fd,people.buf );////////
-       /* while( p )
-        {
-            if( strcmp( p->number,people.number ) == 0 )
-            {
-                break;
-            }
-            p = p->next;
-        }*/
         if( ret == 0 )
             return ;
         send( people.fd,(void *)&people,sizeof(people),0 );
@@ -1135,7 +1122,7 @@ void online_remind( char *number )      //发送好友上线提醒
     }
 }
 
-void outline_remind( char *number )     //发送好友下线提    //发送好友下线提醒
+void outline_remind( char *number )     //发送好友下线提
 {
     int ret;
     peo *p1;

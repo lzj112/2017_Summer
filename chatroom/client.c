@@ -9,15 +9,17 @@
 #include<string.h>
 #include<stdlib.h>
 #include<sys/types.h>
+#include<fcntl.h>
 #include<sys/socket.h>
 #include<unistd.h>
+#include<sys/stat.h>
 #include<netinet/in.h>
 #include<pthread.h>
 #include<arpa/inet.h>
 #include<signal.h>
 #include<signal.h>
 
-#define MAXLEN 1000     //聊天最长输入
+#define MAXLEN 512     //聊天最长输入
 #define PORT 4507
 #define IP "127.0.0.1"
         
@@ -28,7 +30,7 @@ typedef struct a{
     int flag;           //标志是登录还是注册
     int login;          //标志各种功能 2为登录成功 其他看menu
     int power;          //权限 能否禁言 踢人
-    char txt[100];            //文件传输权限
+    char txt[100];      //文件传输权限
     char number[10];    //账号
     char passwd[20];    //密码
     char object[10];    //聊天对象
@@ -47,16 +49,14 @@ typedef struct b{
 
 int chatting;
 int chat_flag = 1;
-int flag;  //判断客户端是否收到了服务器发来的消息
 
-
+int file_size( char *filename );
 void delxiaoxi();
 void s();
 void save_wenjian();
 void ask();
 void tp();
 void group_chat();
-void look_precord( );
 void del_friend();
 void person_chat();
 int log_in();
@@ -227,7 +227,6 @@ int menu()      //主界面
         printf( "\t*****************************************\n" );
 
         scanf( "%s",n );
-        //choose = atoi(n);
        while(strcmp(n,"1")!=0&&strcmp(n,"2")!=0&&strcmp(n,"3")!=0&&strcmp(n,"4")!=0&&strcmp(n,"5")!=0&&strcmp(n,"6")!=0&&strcmp(n,"7")!=0&&strcmp(n,"8")!=0&&strcmp(n,"9")!=0&&strcmp(n,"0")!=0)
        {
            printf( "错误选项，重新选择\n" );
@@ -254,7 +253,7 @@ int log_in()   //登录
         printf( "client send error\n" );
         exit(0);
     }
-
+    
     if( recv(s_fd,(void *)&flag,sizeof(flag),0) < 0 )       //接收
     {
         printf( "client recv error\n" );
@@ -771,7 +770,9 @@ void tp()       //文件传输
 {
     char tmp[100] = {0};
     char pathname[50];
-    FILE *fp;
+      int fp;
+    int size,sum,t;
+    sum = 0,t = 0;
 
     printf( "输入想传输文件的账号:\n" );
     scanf( "%s",guy.object );
@@ -789,37 +790,35 @@ void tp()       //文件传输
     scanf( "%s",pathname );
     getchar();
     
-    fp = fopen( pathname,"rb" );
-    if( fp == NULL )
-    {
-        printf( "找不到该文件\n" );
-        return ;
-    }
+    size = file_size( pathname );  //获取文件大小
+
+    fp = open( pathname,O_RDONLY );
 
     guy.login = 999;
     strcpy(  guy.pathname,pathname );
     memset( guy.buf,0,sizeof(guy.buf) );
 
-    while( fscanf( fp,"\n%[^\n]",guy.buf) != EOF )
+    while( 1 )
     {
+        t=read( fp,guy.buf,256 );
+        sum+=t;
         send( s_fd,(void *)&guy,sizeof(guy),0 );
         usleep(10000);
         memset( guy.buf,0,sizeof(guy.buf) );
+        if( sum == size  )  //读取完成 跳出循环
+            break;
     }
     printf( "\n" );
-    fclose(fp);
+    close(fp);
 }
 
 void save_wenjian()         //保存接受的文件
 {
-    FILE *fp;
+    int fp;
     strcat(guy.pathname,"...");
-    if( (fp = fopen(guy.pathname,"ab")) == NULL )
-    {
-        fp = fopen(guy.pathname,"wb");
-    }
-    fprintf( fp,"%s\n",guy.buf );
-    fclose(fp);
+    fp = open( guy.pathname,O_WRONLY | O_CREAT | O_APPEND,S_IRUSR | S_IWUSR );
+    write( fp,guy.buf,256 );
+    close(fp);
 }
 
 void delxiaoxi()    //清空消息盒子
@@ -833,4 +832,14 @@ void delxiaoxi()    //清空消息盒子
         p = pp;
     }
     head->next = NULL;
+}
+ 
+ 
+int file_size(char* filename)   //获取文件大小  
+{  
+    struct stat statbuf;  
+    stat(filename,&statbuf);  
+    int size=statbuf.st_size;  
+  
+    return size;  
 }

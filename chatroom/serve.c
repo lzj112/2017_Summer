@@ -33,7 +33,7 @@ typedef struct b{           //用户各种信息
     char passwd[20];
     char object[10];
     char pathname[100];
-    char buf[100];
+    char buf[512];
 }user;
 
 typedef struct a{       //每个人的好友
@@ -59,6 +59,7 @@ typedef struct d{         //用户的离线消息
     struct d *next;
 }off;
 
+int i = 1;//////////////////
 time_t *timep;
 user people;
 peo *head;
@@ -497,7 +498,7 @@ int check_line( char *number )     //检查对方是否离线
         }
         p = p->next;
     }
-    return -1;    //没有这个账号
+    return 0;    //没有这个账号
 }
 
 
@@ -1040,7 +1041,6 @@ void ask( int conn_fd )      //请求传输文件
     peo *p = head->next;
 
 
-    ret = check_line( p->number );
     if( people.login == 9 )
     {
         while( p )
@@ -1051,15 +1051,11 @@ void ask( int conn_fd )      //请求传输文件
             }
             p = p->next;
         }
-    people.fd = conn_fd; 
-        if( ret == 0 )
-            return ;
+        people.fd = conn_fd; 
         send( p->fd,(void *)&people,sizeof(people),0 );
     }
     if( people.login == 99 )
     {
-        if( ret == 0 )
-            return ;
         send( people.fd,(void *)&people,sizeof(people),0 );
     }
 
